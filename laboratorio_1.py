@@ -33,25 +33,45 @@ class Calculo:
         '''
         Función que calcula el campo eléctrico sobre una carga puntual
         '''
-        rtdo = 0
         cargas = self.inicializar_cargas()
+        cant_cargas = len(self.cargas)
         idx_carga_elegida = int(input("Indique la carga a la que quiere aplicarle el campo. Ej: 1, 2 o 3 - "))
-        carga_elegida = cargas.get(idx_carga_elegida)
-        print(carga_elegida)
-        for idx, valor in cargas.items():
-            if idx != idx_carga_elegida:
-                # Calculo en coordenadas x
-                valor_x1 = valor.x
-                distancia_x = carga_elegida.x - valor_x1
+        if idx_carga_elegida > cant_cargas:
+            print('Carga elegida no disponible')
+        else:
+            carga_elegida = cargas.get(idx_carga_elegida)
+        
+            campo_x_total = 0
+            campo_y_total = 0
+        
+            for idx, carga_fuente in cargas.items():
+                if idx != idx_carga_elegida:
+                    # Vector distancia desde la carga fuente hacia la carga elegida
+                    distancia_x = carga_elegida.x - carga_fuente.x
+                    distancia_y = carga_elegida.y - carga_fuente.y
+                
+                    # Magnitud de la distancia
+                    r = self.calcular_distancia(distancia_x, distancia_y)
+                
+                    print(f"Carga fuente {idx}: valor={carga_fuente.valor}")
+                    print(f"Distancia x: {distancia_x}")
+                    print(f"Distancia y: {distancia_y}")
+                    print(f"Distancia r: {r}")
 
-                # Calculo en coordenadas y
-                valor_y1 = valor.y
-                distancia_y = carga_elegida.y - valor_y1
+                    campo_x = COEFICIENTE_ELECTRICO * carga_fuente.valor * distancia_x / pow(r, 3)
+                    campo_y = COEFICIENTE_ELECTRICO * carga_fuente.valor * distancia_y / pow(r, 3)
 
-                # Calculo r
-                r = self.calcular_distancia(distancia_x, distancia_y)
-
-                # Armamos la formula
+                    campo_x_total += campo_x
+                    campo_y_total += campo_y
+                    print("-" * 30)
+        
+            # Magnitud total del campo
+            magnitud_total = self.calcular_distancia(campo_x_total, campo_y_total)
+            
+            print(f"Campo total Ex: {campo_x_total} mC")
+            print(f"Campo total Ey: {campo_y_total} mC")
+            print(f"Magnitud del campo eléctrico: {magnitud_total} mC")
+            print(f"Vector del campo eléctrico: E(x,y) = {campo_x_total} mC * i + {campo_y_total} * j")
 
     def calcular_potencial_electrico(self):
         print("potencial")
@@ -77,9 +97,15 @@ def menu(sistema):
     print('1: Calculo del campo eléctrico \n')
     print('2: Calculo del potencial eléctrico \n')
     print('3: Salir del programa \n')
-    opcion_seleccionada = int(input('Ingrese una opción - '))
-    funcion = opciones.get(opcion_seleccionada)
-    funcion()
+    entrada = input('Ingrese una opción - ').strip()
+    if not entrada:
+        print("Opcion ingresada no válida .")
+    else:
+        print(entrada)
+        opcion_seleccionada = int(entrada)
+        funcion = opciones.get(opcion_seleccionada)
+        if funcion:
+            funcion()
 
 def salir():
     print("Cerrando script ...")        
