@@ -1,10 +1,11 @@
 import sys
+import numpy as np
+import matplotlib.pyplot as plt
 
-COEFICIENTE_ELECTRICO = 9 * pow(10,9) 
+COEFICIENTE_ELECTRICO = 9 * pow(10,9)
 
 class Carga:
-    # Constructor
-    def __init__(self, valor , pos , x, y,):
+    def __init__(self, valor, pos, x, y):
         self.valor = valor
         self.pos = pos
         self.x = x
@@ -14,7 +15,6 @@ class Carga:
         return f"Carga(valor={self.valor}, pos={self.pos}, x={self.x}, y={self.y})"
 
 class Calculo:
-    # Constructor
     def __init__(self):
         self.cargas = {}
 
@@ -23,36 +23,42 @@ class Calculo:
 
     def inicializar_cargas(self):
         nro_cargas = int(input("Ingrese la cantidad de cargas - "))
-        for idx in range(1,nro_cargas+1):
-            valor,coord_x, coord_y = map(int, input(f"Ingrese el valor de la carga, coordenada x e y para la carga {idx}: ").split())
-            carga = Carga(valor,idx,coord_x, coord_y)
+        for idx in range(1, nro_cargas + 1):
+            valor, coord_x, coord_y = map(int, input(f"Ingrese el valor de la carga, coordenada x e y para la carga {idx}: ").split())
+            carga = Carga(valor, idx, coord_x, coord_y)
             self.cargas[idx] = carga
         return self.cargas
+
+    def cargar_cargas(self):
+        if not self.cargas:
+            self.inicializar_cargas()
+        return self.cargas
+
+    def reingresar_cargas(self):
+        self.cargas = {}
+        self.inicializar_cargas()
 
     def calcular_espacio_electrico(self):
         '''
         Función que calcula el campo eléctrico sobre una carga puntual
         '''
-        cargas = self.inicializar_cargas()
+        cargas = self.cargar_cargas()
         cant_cargas = len(self.cargas)
         idx_carga_elegida = int(input("Indique la carga a la que quiere aplicarle el campo. Ej: 1, 2 o 3 - "))
         if idx_carga_elegida > cant_cargas:
             print('Carga elegida no disponible')
         else:
             carga_elegida = cargas.get(idx_carga_elegida)
-        
+
             campo_x_total = 0
             campo_y_total = 0
-        
+
             for idx, carga_fuente in cargas.items():
                 if idx != idx_carga_elegida:
-                    # Vector distancia desde la carga fuente hacia la carga elegida
                     distancia_x = carga_elegida.x - carga_fuente.x
                     distancia_y = carga_elegida.y - carga_fuente.y
-                
-                    # Magnitud de la distancia
                     r = self.calcular_distancia(distancia_x, distancia_y)
-                
+
                     print(f"Carga fuente {idx}: valor={carga_fuente.valor}")
                     print(f"Distancia x: {distancia_x}")
                     print(f"Distancia y: {distancia_y}")
@@ -64,10 +70,9 @@ class Calculo:
                     campo_x_total += campo_x
                     campo_y_total += campo_y
                     print("-" * 30)
-        
-            # Magnitud total del campo
+
             magnitud_total = self.calcular_distancia(campo_x_total, campo_y_total)
-            
+
             print(f"Campo total Ex: {campo_x_total} mC")
             print(f"Campo total Ey: {campo_y_total} mC")
             print(f"Magnitud del campo eléctrico: {magnitud_total} mC")
@@ -75,7 +80,7 @@ class Calculo:
 
     def calcular_potencial_electrico(self):
         print("potencial")
-    
+
     def calcular_distancia(self, dist_x, dist_y):
         import math
         dist_x_cuadrado = pow(dist_x,2)
@@ -84,19 +89,92 @@ class Calculo:
         rtdo = math.sqrt(dist_sumada)
         return rtdo
 
+    def _cargas_numpy(self):
+        self.cargar_cargas()
+        qs  = np.array([float(c.valor) for c in self.cargas.values()], dtype=float)
+        xqs = np.array([float(c.x)     for c in self.cargas.values()], dtype=float)
+        yqs = np.array([float(c.y)     for c in self.cargas.values()], dtype=float)
+        return qs, xqs, yqs
+
+    def graficar_Ex_sobre_eje_x(self):
+        """
+        E_x(x) sobre y=0: muestra E_x de cada carga y la superposición.
+        Rango fijo para simplificar: x ∈ [-10, 10], 1000 puntos.
+        """
+        qs, xqs, yqs = self._cargas_numpy()
+
+        x = np.linspace(-10.0, 10.0, 1000)
+        dx = x[:, None] - xqs[None, :]
+        dy = 0.0 - yqs[None, :]
+        r  = np.sqrt(dx**2 + dy**2)
+        r[r == 0] = np.inf
+
+        Ex_each  = COEFICIENTE_ELECTRICO * qs[None, :] * dx / (r**3)
+        Ex_total = Ex_each.sum(axis=1)
+
+        plt.figure(figsize=(9, 5))
+        for j in range(qs.size):
+            plt.plot(x, Ex_each[:, j], linewidth=1,
+                     label=f"E_x carga {j+1} (q={qs[j]}, x={xqs[j]}, y={yqs[j]})")
+        plt.plot(x, Ex_total, linewidth=2, label="E_x superposición (todas)")
+        plt.axhline(0, linestyle="--", linewidth=0.8)
+        plt.xlabel("x [m]")
+        plt.ylabel("E_x(x) [N/C]")
+        plt.title("Componente E_x sobre el eje x (individuales y superposición)")
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
+
+    def graficar_lineas_campo(self):
+        qs, xqs, yqs = self._cargas_numpy()
+
+        x = np.linspace(-10.0, 10.0, 200)
+        y = np.linspace(-10.0, 10.0, 200)
+        X, Y = np.meshgrid(x, y)
+
+        dx = X[..., None] - xqs[None, None, :]
+        dy = Y[..., None] - yqs[None, None, :]
+        r  = np.sqrt(dx**2 + dy**2)
+        r[r == 0] = np.inf
+
+        Ex = (COEFICIENTE_ELECTRICO * qs[None, None, :] * dx / (r**3)).sum(axis=-1)
+        Ey = (COEFICIENTE_ELECTRICO * qs[None, None, :] * dy / (r**3)).sum(axis=-1)
+
+        fig, ax = plt.subplots(figsize=(7, 7))
+        ax.streamplot(X, Y, Ex, Ey, density=1.2, linewidth=1)
+
+        for j in range(qs.size):
+            color = "red" if qs[j] > 0 else "blue"
+            ax.scatter([xqs[j]], [yqs[j]], s=60, c=color, edgecolors="k", zorder=3)
+            ax.text(xqs[j] + 0.2, yqs[j] + 0.2, f"q{j+1}", fontsize=9)
+
+        ax.set_xlabel("x [m]")
+        ax.set_ylabel("y [m]")
+        ax.set_title("Líneas de campo eléctrico (superposición)")
+        ax.set_aspect("equal", adjustable="box")
+        ax.grid(True, alpha=0.2)
+        plt.tight_layout()
+        plt.show()
+
 
 def menu(sistema):
     opciones = {
         1: sistema.calcular_espacio_electrico,
         2: sistema.calcular_potencial_electrico,
-        3: salir
+        3: sistema.graficar_Ex_sobre_eje_x,
+        4: sistema.graficar_lineas_campo,
+        5: sistema.reingresar_cargas,
+        6: salir
     }
 
     print('Menú de opciones\n')
     print('----------------------------------\n')
     print('1: Calculo del campo eléctrico \n')
     print('2: Calculo del potencial eléctrico \n')
-    print('3: Salir del programa \n')
+    print('3: Graficar E_x(x) (individuales + superposición)\n')
+    print('4: Graficar líneas de campo resultante\n')
+    print('5: Reingresar cargas\n')
+    print('6: Salir del programa \n')
     entrada = input('Ingrese una opción - ').strip()
     if not entrada:
         print("Opcion ingresada no válida .")
@@ -108,9 +186,9 @@ def menu(sistema):
             funcion()
 
 def salir():
-    print("Cerrando script ...")        
+    print("Cerrando script ...")
     sys.exit(0)
-    
+
 def main():
     print('*******************************************\n')
     print('*******************************************\n')
