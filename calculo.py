@@ -18,89 +18,81 @@ class Calculo:
             self.cargas[idx] = carga
         return self.cargas
 
-    def cargar_cargas(self):
-        if not self.cargas:
-            self.inicializar_cargas()
-        return self.cargas
-
-    def reingresar_cargas(self):
-        self.cargas = {}
-        self.inicializar_cargas()
 
     def calcular_espacio_electrico(self):
         '''
         Función que calcula el campo eléctrico sobre una carga puntual
         '''
-        cargas = self.cargar_cargas()
+        cargas = self.obtener_cargas()
         cant_cargas = len(cargas)
         idx_carga_elegida = int(input("Indique la carga a la que quiere aplicarle el campo. Ej: 1, 2 o 3 - "))
+        
         if idx_carga_elegida > cant_cargas:
             print('Carga elegida no disponible')
-        else:
-            carga_elegida = cargas.get(idx_carga_elegida)
+            return
+            
+        carga_elegida = cargas.get(idx_carga_elegida)
+        campo_x_total = 0
+        campo_y_total = 0
 
-            campo_x_total = 0
-            campo_y_total = 0
+        for idx, carga_puntual in cargas.items():
+            if idx != idx_carga_elegida:
+                distancia_x = carga_elegida.x - carga_puntual.x
+                distancia_y = carga_elegida.y - carga_puntual.y
+                r = self.calcular_distancia(distancia_x, distancia_y)
 
-            for idx, carga_puntual in cargas.items():
-                if idx != idx_carga_elegida:
-                    distancia_x = carga_elegida.x - carga_puntual.x
-                    distancia_y = carga_elegida.y - carga_puntual.y
-                    r = self.calcular_distancia(distancia_x, distancia_y)
+                if r == 0:
+                    print('Error: Se está calculando el campo sobre la misma carga elegida!')
+                    return
+                else:
+                    campo_x = COEFICIENTE_ELECTRICO * carga_puntual.valor * distancia_x / pow(r, 3)
+                    campo_y = COEFICIENTE_ELECTRICO * carga_puntual.valor * distancia_y / pow(r, 3)
+                    campo_x_total += campo_x
+                    campo_y_total += campo_y
 
-                    print(f"Carga puntual {idx}: valor={carga_puntual.valor}")
-                    print(f"Distancia x: {distancia_x}")
-                    print(f"Distancia y: {distancia_y}")
-                    print(f"Distancia r: {r}")
+        magnitud_total = self.calcular_distancia(campo_x_total, campo_y_total)
 
-                    if r == 0:
-                        print('Se está calculando el potencial sobre la misma carga elegida!!')
-                    else:
-                        campo_x = COEFICIENTE_ELECTRICO * carga_puntual.valor * distancia_x / pow(r, 3)
-                        campo_y = COEFICIENTE_ELECTRICO * carga_puntual.valor * distancia_y / pow(r, 3)
-
-                        campo_x_total += campo_x
-                        campo_y_total += campo_y
-                    print("-" * 30)
-
-            magnitud_total = self.calcular_distancia(campo_x_total, campo_y_total)
-
-            print(f"Campo total Ex: {campo_x_total} mC")
-            print(f"Campo total Ey: {campo_y_total} mC")
-            print(f"Magnitud del campo eléctrico: {magnitud_total} mC")
-            print(f"Vector del campo eléctrico: E(x,y) = {campo_x_total} mC * i + {campo_y_total} * j")
+        print(f"\n=== RESULTADO ===")
+        print(f"Campo eléctrico en la carga {idx_carga_elegida}:")
+        print(f"E_x = {campo_x_total:.2e} N/C")
+        print(f"E_y = {campo_y_total:.2e} N/C")
+        print(f"Magnitud = {magnitud_total:.2e} N/C")
+        print(f"Vector: E = {campo_x_total:.2e} i + {campo_y_total:.2e} j")
+        
+        input("\nPresione Enter para continuar...")
 
     def calcular_potencial_electrico(self):
         '''
         Función que calcula el potencial eléctrico sobre una carga puntual
         '''
-        cargas = self.cargar_cargas()
+        cargas = self.obtener_cargas()
         cant_cargas = len(cargas)
         idx_carga_elegida = int(input("Indique la carga a la que quiere aplicarle el potencial. Ej: 1, 2 o 3 - "))
+        
         if idx_carga_elegida > cant_cargas:
             print('Carga elegida no disponible')
-        else:
-            carga_elegida = cargas.get(idx_carga_elegida)
-            print(carga_elegida)
+            return
+            
+        carga_elegida = cargas.get(idx_carga_elegida)
+        potencial_total = 0
 
-            potencial_total = 0
+        for idx, carga_puntual in cargas.items():
+            if idx != idx_carga_elegida:
+                distancia_x = carga_elegida.x - carga_puntual.x
+                distancia_y = carga_elegida.y - carga_puntual.y
+                r = self.calcular_distancia(distancia_x, distancia_y)
 
-            for idx, carga_puntual in cargas.items():
-                if idx != idx_carga_elegida:
-                    distancia_x = carga_elegida.x - carga_puntual.x
-                    distancia_y = carga_elegida.y - carga_puntual.y
-                    r = self.calcular_distancia(distancia_x, distancia_y)
+                if r == 0:
+                    print('Error: Se está calculando el potencial sobre la misma carga elegida!')
+                    return
+                else:
+                    potencial_total += COEFICIENTE_ELECTRICO * carga_puntual.valor / r
 
-                    print(f"Carga puntual {idx}: valor={carga_puntual.valor}")
-                    print(f"Distancia x: {distancia_x}")
-                    print(f"Distancia y: {distancia_y}")
-                    print(f"Distancia r: {r}")
-
-                    if r == 0:
-                        print('Se está calculando el potencial sobre la misma carga elegida!!')
-                    else:
-                        potencial_total += COEFICIENTE_ELECTRICO * carga_puntual.valor / r
-            print(f"Potencial eléctrico resultante: {potencial_total}")
+        print(f"\n=== RESULTADO ===")
+        print(f"Potencial eléctrico en la carga {idx_carga_elegida}:")
+        print(f"V = {potencial_total:.2e} V")
+        
+        input("\nPresione Enter para continuar...")
         
 
     def calcular_distancia(self, dist_x, dist_y):

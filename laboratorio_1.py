@@ -9,8 +9,7 @@ def menu(calculo, grafico):
         2: calculo.calcular_potencial_electrico,
         3: grafico.graficar_Ex_sobre_eje_x,
         4: grafico.graficar_lineas_campo,
-        5: calculo.reingresar_cargas,
-        6: salir
+        5: salir
     }
 
     cargas = calculo.obtener_cargas()
@@ -25,10 +24,9 @@ def menu(calculo, grafico):
         print(msg)
     print("1: Calculo del campo eléctrico")
     print("2: Calculo del potencial eléctrico")
-    print("3: Graficar E_x(x) (individuales + superposición")
-    print("4: Graficar líneas de campo resultant")
-    print("5: Reingresar carga")
-    print("6: Salir del programa")
+    print("3: Graficar E_x(x) (2 ventanas: individuales y superposición)")
+    print("4: Graficar líneas de campo resultante")
+    print("5: Salir del programa")
     print("-" * 30)
     
     entrada = input('Ingrese una opción - ').strip()
@@ -46,7 +44,14 @@ def salir():
 
 def main():
     calc = Calculo()
-    graf = Grafico()
+    
+    # Cargar las cargas una sola vez al inicio
+    print("=== CONFIGURACIÓN DE CARGAS ===")
+    calc.inicializar_cargas()
+    print("Cargas configuradas correctamente.\n")
+    
+    # Crear el objeto Grafico con referencia al calculo
+    graf = Grafico(calc)
 
     while True:
         menu(calc, graf)

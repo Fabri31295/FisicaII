@@ -1,14 +1,25 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from calculo import COEFICIENTE_ELECTRICO
+
 class Grafico:
+    def __init__(self, calculo=None):
+        self.calculo = calculo
+    
     def _cargas_numpy(self):
-        self.cargar_cargas()
-        qs  = np.array([float(c.valor) for c in self.cargas.values()], dtype=float)
-        xqs = np.array([float(c.x)     for c in self.cargas.values()], dtype=float)
-        yqs = np.array([float(c.y)     for c in self.cargas.values()], dtype=float)
+        if self.calculo:
+            cargas = self.calculo.obtener_cargas()
+        else:
+            raise ValueError("No se ha proporcionado un objeto Calculo")
+        
+        qs  = np.array([float(c.valor) for c in cargas.values()], dtype=float)
+        xqs = np.array([float(c.x)     for c in cargas.values()], dtype=float)
+        yqs = np.array([float(c.y)     for c in cargas.values()], dtype=float)
         return qs, xqs, yqs
 
     def graficar_Ex_sobre_eje_x(self):
         """
-        E_x(x) sobre y=0: muestra E_x de cada carga y la superposición.
+        E_x(x) sobre y=0: muestra E_x de cada carga individual y la superposición en ventanas separadas.
         Rango fijo para simplificar: x ∈ [-10, 10], 1000 puntos.
         """
         qs, xqs, yqs = self._cargas_numpy()
@@ -22,18 +33,36 @@ class Grafico:
         Ex_each  = COEFICIENTE_ELECTRICO * qs[None, :] * dx / (r**3)
         Ex_total = Ex_each.sum(axis=1)
 
-        plt.figure(figsize=(9, 5))
+        # Activar modo interactivo para ventanas simultáneas
+        plt.ion()
+
+        # PRIMER GRÁFICO: Cargas individuales
+        fig1 = plt.figure(figsize=(10, 6))
         for j in range(qs.size):
-            plt.plot(x, Ex_each[:, j], linewidth=1,
+            plt.plot(x, Ex_each[:, j], linewidth=2,
                      label=f"E_x carga {j+1} (q={qs[j]}, x={xqs[j]}, y={yqs[j]})")
-        plt.plot(x, Ex_total, linewidth=2, label="E_x superposición (todas)")
-        plt.axhline(0, linestyle="--", linewidth=0.8)
+        plt.axhline(0, linestyle="--", linewidth=0.8, color='black', alpha=0.5)
         plt.xlabel("x [m]")
         plt.ylabel("E_x(x) [N/C]")
-        plt.title("Componente E_x sobre el eje x (individuales y superposición)")
+        plt.title("Campo E_x(x) - Cargas Individuales")
         plt.legend()
+        plt.grid(True, alpha=0.3)
         plt.tight_layout()
-        plt.show()
+        plt.show(block=False)
+
+        # SEGUNDO GRÁFICO: Superposición
+        fig2 = plt.figure(figsize=(10, 6))
+        plt.plot(x, Ex_total, linewidth=3, color='red', label="E_x superposición (todas las cargas)")
+        plt.axhline(0, linestyle="--", linewidth=0.8, color='black', alpha=0.5)
+        plt.xlabel("x [m]")
+        plt.ylabel("E_x(x) [N/C]")
+        plt.title("Campo E_x(x) - Superposición de las 3 cargas")
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        plt.tight_layout()
+        plt.show(block=False)
+        
+        input("\nPresione Enter para continuar...")
 
     def graficar_lineas_campo(self):
         qs, xqs, yqs = self._cargas_numpy()
