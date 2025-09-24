@@ -53,11 +53,14 @@ class Calculo:
                     print(f"Distancia y: {distancia_y}")
                     print(f"Distancia r: {r}")
 
-                    campo_x = COEFICIENTE_ELECTRICO * carga_puntual.valor * distancia_x / pow(r, 3)
-                    campo_y = COEFICIENTE_ELECTRICO * carga_puntual.valor * distancia_y / pow(r, 3)
+                    if r == 0:
+                        print('Se está calculando el potencial sobre la misma carga elegida!!')
+                    else:
+                        campo_x = COEFICIENTE_ELECTRICO * carga_puntual.valor * distancia_x / pow(r, 3)
+                        campo_y = COEFICIENTE_ELECTRICO * carga_puntual.valor * distancia_y / pow(r, 3)
 
-                    campo_x_total += campo_x
-                    campo_y_total += campo_y
+                        campo_x_total += campo_x
+                        campo_y_total += campo_y
                     print("-" * 30)
 
             magnitud_total = self.calcular_distancia(campo_x_total, campo_y_total)
@@ -74,15 +77,16 @@ class Calculo:
         cargas = self.cargar_cargas()
         cant_cargas = len(cargas)
         idx_carga_elegida = int(input("Indique la carga a la que quiere aplicarle el potencial. Ej: 1, 2 o 3 - "))
-        if idx_carga_elegida < cant_cargas:
+        if idx_carga_elegida > cant_cargas:
             print('Carga elegida no disponible')
         else:
             carga_elegida = cargas.get(idx_carga_elegida)
+            print(carga_elegida)
 
             potencial_total = 0
 
             for idx, carga_puntual in cargas.items():
-                if idx != carga_elegida:
+                if idx != idx_carga_elegida:
                     distancia_x = carga_elegida.x - carga_puntual.x
                     distancia_y = carga_elegida.y - carga_puntual.y
                     r = self.calcular_distancia(distancia_x, distancia_y)
@@ -92,8 +96,11 @@ class Calculo:
                     print(f"Distancia y: {distancia_y}")
                     print(f"Distancia r: {r}")
 
-                    potencial = COEFICIENTE_ELECTRICO * carga_puntual.valor / r
-
+                    if r == 0:
+                        print('Se está calculando el potencial sobre la misma carga elegida!!')
+                    else:
+                        potencial_total += COEFICIENTE_ELECTRICO * carga_puntual.valor / r
+            print(f"Potencial eléctrico resultante: {potencial_total}")
         
 
     def calcular_distancia(self, dist_x, dist_y):
