@@ -1,6 +1,6 @@
 from carga import Carga
-
-COEFICIENTE_ELECTRICO = 9 * pow(10,9)
+from grafico import Grafico
+from utils import COEFICIENTE_ELECTRICO
 
 class Calculo:
 
@@ -35,6 +35,8 @@ class Calculo:
         campo_x_total = 0
         campo_y_total = 0
 
+        grafico = Grafico(self)
+        
         for idx, carga_puntual in cargas.items():
             if idx != idx_carga_elegida:
                 distancia_x = carga_elegida.x - carga_puntual.x
@@ -47,17 +49,20 @@ class Calculo:
                 else:
                     campo_x = COEFICIENTE_ELECTRICO * carga_puntual.valor * distancia_x / pow(r, 3)
                     campo_y = COEFICIENTE_ELECTRICO * carga_puntual.valor * distancia_y / pow(r, 3)
+                    
                     campo_x_total += campo_x
                     campo_y_total += campo_y
 
         magnitud_total = self.calcular_distancia(campo_x_total, campo_y_total)
 
-        print(f"\n=== RESULTADO ===")
-        print(f"Campo eléctrico en la carga {idx_carga_elegida}:")
-        print(f"E_x = {campo_x_total:.2e} N/C")
-        print(f"E_y = {campo_y_total:.2e} N/C")
+        print(f"-" * 20)
         print(f"Magnitud = {magnitud_total:.2e} N/C")
         print(f"Vector: E = {campo_x_total:.2e} i + {campo_y_total:.2e} j")
+        
+        grafico.graficar_campo_electrico(campo_x_total, campo_y_total, magnitud_total,
+                                       carga_elegida.x, carga_elegida.y, idx_carga_elegida)
+        
+        grafico.graficar_lineas_campo()
         
         input("\nPresione Enter para continuar...")
 
@@ -90,7 +95,7 @@ class Calculo:
 
         print(f"\n=== RESULTADO ===")
         print(f"Potencial eléctrico en la carga {idx_carga_elegida}:")
-        print(f"V = {potencial_total:.2e} V")
+        print(f"V = {potencial_total} V")
         
         input("\nPresione Enter para continuar...")
         

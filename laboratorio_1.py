@@ -7,9 +7,7 @@ def menu(calculo, grafico):
     opciones = {
         1: calculo.calcular_espacio_electrico,
         2: calculo.calcular_potencial_electrico,
-        3: grafico.graficar_Ex_sobre_eje_x,
-        4: grafico.graficar_lineas_campo,
-        5: salir
+        3: salir
     }
 
     cargas = calculo.obtener_cargas()
@@ -24,9 +22,7 @@ def menu(calculo, grafico):
         print(msg)
     print("1: Calculo del campo eléctrico")
     print("2: Calculo del potencial eléctrico")
-    print("3: Graficar E_x(x) (2 ventanas: individuales y superposición)")
-    print("4: Graficar líneas de campo resultante")
-    print("5: Salir del programa")
+    print("3: Salir del programa")
     print("-" * 30)
     
     entrada = input('Ingrese una opción - ').strip()
