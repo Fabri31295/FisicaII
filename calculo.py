@@ -68,7 +68,7 @@ class Calculo:
 
     def calcular_potencial_electrico(self):
         '''
-        Función que calcula el potencial eléctrico sobre una carga puntual
+        Función que calcula el potencial eléctrico sobre una carga puntual y genera gráficos
         '''
         cargas = self.obtener_cargas()
         cant_cargas = len(cargas)
@@ -80,7 +80,8 @@ class Calculo:
             
         carga_elegida = cargas.get(idx_carga_elegida)
         potencial_total = 0
-
+        grafico = Grafico(self)
+        
         for idx, carga_puntual in cargas.items():
             if idx != idx_carga_elegida:
                 distancia_x = carga_elegida.x - carga_puntual.x
@@ -91,11 +92,26 @@ class Calculo:
                     print('Error: Se está calculando el potencial sobre la misma carga elegida!')
                     return
                 else:
-                    potencial_total += COEFICIENTE_ELECTRICO * carga_puntual.valor / r
+                    potencial_individual = COEFICIENTE_ELECTRICO * carga_puntual.valor / r
+                    
+                    # Mostrar información del potencial individual
+                    print(f"Carga {idx}: q={carga_puntual.valor} C en ({carga_puntual.x}, {carga_puntual.y})")
+                    print(f"  Potencial sobre carga {idx_carga_elegida}: V={potencial_individual:.2e} V")
+                    
+                    # Graficar potencial individual
+                    #grafico.graficar_potencial_individual(carga_puntual.valor, carga_puntual.x, carga_puntual.y,
+                    #                                    idx, potencial_individual)
+                    
+                    potencial_total += potencial_individual
 
-        print(f"\n=== RESULTADO ===")
-        print(f"Potencial eléctrico en la carga {idx_carga_elegida}:")
-        print(f"V = {potencial_total} V")
+        print(f"\n" + "="*50)
+        print(f"RESULTADO FINAL - Potencial eléctrico en la carga {idx_carga_elegida}:")
+        print(f"V = {potencial_total:.2e} V")
+        print("="*50)
+        
+        # Generar gráficos de superposición y equipotenciales
+        print(f"\nGenerando gráficos de superposición y equipotenciales...")
+        grafico.graficar_potencial_electrico(potencial_total, carga_elegida.x, carga_elegida.y, idx_carga_elegida)
         
         input("\nPresione Enter para continuar...")
         
