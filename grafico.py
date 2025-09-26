@@ -32,6 +32,10 @@ class Grafico:
         nombre_archivo = f"Graficos/{tipo_grafico}_{timestamp}.png"
         return nombre_archivo
 
+    def _guardar_archivo(self, plt, titulo):
+        archivo = self._crear_nombre_archivo(titulo)
+        plt.savefig(archivo, dpi=300, bbox_inches='tight')
+        print(f"Gráfico guardado como '{archivo}'")
 
     def graficar_lineas_campo(self):
         qs, xqs, yqs = self._cargas_numpy()
@@ -68,10 +72,8 @@ class Grafico:
         ax.grid(True, alpha=0.2)
         plt.tight_layout()
         
-        archivo = self._crear_nombre_archivo("lineas_campo_electrico")
-        plt.savefig(archivo, dpi=300, bbox_inches='tight')
-        print(f"Gráfico guardado como '{archivo}'")
-        
+        self._guardar_archivo(plt, "lineas_campo_electrico")
+
         plt.show()
     
     def graficar_campo_electrico(self, mostrar="individual"):
@@ -116,6 +118,8 @@ class Grafico:
         plt.title(f"Campo eléctrico sobre el eje x ({mostrar})")
         plt.legend()
         plt.grid(alpha=0.3)
+
+        self._guardar_archivo(plt, f"Ex_{mostrar}")
         plt.show()
 
     def graficar_potencial_electrico(self, mostrar="individual"):
@@ -171,6 +175,7 @@ class Grafico:
         plt.title("Potencial eléctrico sobre el eje x")
         plt.legend()
         plt.grid(alpha=0.3)
+        self._guardar_archivo(plt, f"Vx_{mostrar}")
         plt.show()
 
 
@@ -220,4 +225,5 @@ class Grafico:
         plt.axvline(0, color="gray", linewidth=0.5)
         plt.gca().set_aspect("equal", adjustable="box")
         plt.grid(alpha=0.2)
+        self._guardar_archivo(plt, "equipotencial")
         plt.show()
