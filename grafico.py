@@ -202,7 +202,7 @@ class Grafico:
 
         # Graficar contornos
         # Recortar rango de potencial para evitar saturación cerca de las cargas
-        levels = np.logspace(3, 8, 25)
+        levels = np.logspace(2, 9, 30)
         levels = np.concatenate([-levels[::-1], levels])
 
         plt.figure(figsize=(8,6))
