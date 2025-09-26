@@ -7,23 +7,11 @@ class Calculo:
     def __init__(self):
         self.cargas = {}
 
-    def obtener_cargas(self):
-        return self.cargas
-
-    def inicializar_cargas(self):
-        nro_cargas = int(input("Ingrese la cantidad de cargas - "))
-        for idx in range(1, nro_cargas + 1):
-            valor, coord_x, coord_y = map(int, input(f"Ingrese el valor de la carga, coordenada x e y para la carga {idx}: ").split())
-            carga = Carga(valor, idx, coord_x, coord_y)
-            self.cargas[idx] = carga
-        return self.cargas
-
-
     def calcular_espacio_electrico(self):
         '''
         Función que calcula el campo eléctrico sobre una carga puntual
         '''
-        cargas = self.obtener_cargas()
+        cargas = self.cargas
         cant_cargas = len(cargas)
         idx_carga_elegida = int(input("Indique la carga a la que quiere aplicarle el campo. Ej: 1, 2 o 3 - "))
         
@@ -69,7 +57,7 @@ class Calculo:
         '''
         Función que calcula el potencial eléctrico sobre una carga puntual y genera gráficos
         '''
-        cargas = self.obtener_cargas()
+        cargas = self.cargas
         cant_cargas = len(cargas)
         idx_carga_elegida = int(input("Indique la carga a la que quiere aplicarle el potencial. Ej: 1, 2 o 3 - "))
         
