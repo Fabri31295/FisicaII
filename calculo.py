@@ -1,5 +1,6 @@
 from grafico import Grafico
 from utils import COEFICIENTE_ELECTRICO
+from carga import Punto
 
 class Calculo:
 
@@ -8,37 +9,32 @@ class Calculo:
 
     def calcular_espacio_electrico(self):
         '''
-        Función que calcula el campo eléctrico sobre una carga puntual
+        Función que calcula el campo eléctrico sobre un punto X,Y
         '''
         cargas = self.cargas
-        cant_cargas = len(cargas)
-        idx_carga_elegida = int(input("Indique la carga a la que quiere aplicarle el campo. Ej: 1, 2 o 3 - "))
-        
-        if idx_carga_elegida > cant_cargas:
-            print('Carga elegida no disponible')
-            return
-            
-        carga_elegida = cargas.get(idx_carga_elegida)
+        punto_valores = str(input("Indique el punto sobre el que quiera calcular en la forma X Y (Ej: 1 2) - "))
+        punto_valores = punto_valores.split()
+
+        punto = Punto(int(punto_valores[0]), int(punto_valores[1]))
+
         campo_x_total = 0
         campo_y_total = 0
 
         grafico = Grafico(self)
         
         for idx, carga_puntual in cargas.items():
-            if idx != idx_carga_elegida:
-                distancia_x = carga_elegida.x - carga_puntual.x
-                distancia_y = carga_elegida.y - carga_puntual.y
-                r = self.calcular_distancia(distancia_x, distancia_y)
+            distancia_x = punto.x - carga_puntual.x
+            distancia_y = punto.y - carga_puntual.y
+            r = self.calcular_distancia(distancia_x, distancia_y)
 
-                if r == 0:
-                    print('Error: Se está calculando el campo sobre la misma carga elegida!')
-                    return
-                else:
-                    campo_x = COEFICIENTE_ELECTRICO * carga_puntual.valor * distancia_x / pow(r, 3)
-                    campo_y = COEFICIENTE_ELECTRICO * carga_puntual.valor * distancia_y / pow(r, 3)
-                    
-                    campo_x_total += campo_x
-                    campo_y_total += campo_y
+            if r == 0:
+                continue
+            else:
+                campo_x = COEFICIENTE_ELECTRICO * carga_puntual.valor * distancia_x / pow(r, 3)
+                campo_y = COEFICIENTE_ELECTRICO * carga_puntual.valor * distancia_y / pow(r, 3)
+                
+                campo_x_total += campo_x
+                campo_y_total += campo_y
 
         magnitud_total = self.calcular_distancia(campo_x_total, campo_y_total)
 
@@ -57,37 +53,33 @@ class Calculo:
         Función que calcula el potencial eléctrico sobre una carga puntual y genera gráficos
         '''
         cargas = self.cargas
-        cant_cargas = len(cargas)
-        idx_carga_elegida = int(input("Indique la carga a la que quiere aplicarle el potencial. Ej: 1, 2 o 3 - "))
-        
-        if idx_carga_elegida > cant_cargas:
-            print('Carga elegida no disponible')
-            return
-            
-        carga_elegida = cargas.get(idx_carga_elegida)
+        punto_valores = str(input("Indique el punto sobre el que quiera calcular el potencial en la forma X Y (Ej: 1 2) - "))
+        punto_valores = punto_valores.split()
+
+        punto = Punto(int(punto_valores[0]), int(punto_valores[1]))
+   
         potencial_total = 0
         grafico = Grafico(self)
         
         for idx, carga_puntual in cargas.items():
-            if idx != idx_carga_elegida:
-                distancia_x = carga_elegida.x - carga_puntual.x
-                distancia_y = carga_elegida.y - carga_puntual.y
+           
+                distancia_x = punto.x - carga_puntual.x
+                distancia_y = punto.y - carga_puntual.y
                 r = self.calcular_distancia(distancia_x, distancia_y)
 
                 if r == 0:
-                    print('Error: Se está calculando el potencial sobre la misma carga elegida!')
-                    return
+                    continue
                 else:
                     potencial_individual = COEFICIENTE_ELECTRICO * carga_puntual.valor / r
                     
                     # Mostrar información del potencial individual
                     print(f"Carga {idx}: q={carga_puntual.valor} C en ({carga_puntual.x}, {carga_puntual.y})")
-                    print(f"  Potencial sobre carga {idx_carga_elegida}: V={potencial_individual:.2e} V")
+                    print(f"  Potencial sobre punto X={punto.x}, Y={punto.y}: V={potencial_individual:.2e} V")
                     
                     potencial_total += potencial_individual
 
         print(f"\n" + "="*50)
-        print(f"RESULTADO FINAL - Potencial eléctrico en la carga {idx_carga_elegida}:")
+        print(f"RESULTADO FINAL - Potencial eléctrico en punto X={punto.x}, Y={punto.y}:")
         print(f"V = {potencial_total:.2e} V")
         print("="*50)
         
