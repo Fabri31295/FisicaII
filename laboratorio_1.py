@@ -1,9 +1,7 @@
 import sys
-from carga import Carga
 from calculo import Calculo
-from grafico import Grafico
 
-def menu(calculo, grafico):
+def menu(calculo):
     opciones = {
         1: calculo.calcular_espacio_electrico,
         2: calculo.calcular_potencial_electrico,
@@ -45,12 +43,9 @@ def main():
     print("=== CONFIGURACIÓN DE CARGAS ===")
     calc.inicializar_cargas()
     print("Cargas configuradas correctamente.\n")
-    
-    # Crear el objeto Grafico con referencia al calculo
-    graf = Grafico(calc)
 
     while True:
-        menu(calc, graf)
+        menu(calc)
 
 if __name__ == "__main__":
     main()
