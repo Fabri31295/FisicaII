@@ -1,4 +1,3 @@
-from carga import Carga
 from grafico import Grafico
 from utils import COEFICIENTE_ELECTRICO
 

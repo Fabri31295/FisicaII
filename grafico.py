@@ -197,7 +197,7 @@ class Grafico:
             dx = X - c.x
             dy = Y - c.y
             r = np.sqrt(dx**2 + dy**2)
-            r[r == 0] = np.nan  # evitar singularidades
+            r[r == 0] = np.nan  # evitar div 0
             V_total += k * c.valor / r
 
         # Graficar contornos
