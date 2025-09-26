@@ -173,58 +173,51 @@ class Grafico:
         plt.grid(alpha=0.3)
         plt.show()
 
+
     def graficar_equipotenciales(self):
         """
-        Grafica las líneas equipotenciales en una región 2D
-        """
-        qs, xqs, yqs = self._cargas_numpy()
+        Grafica el mapa de equipotenciales (contorno) para un conjunto de cargas puntuales en 2D.
 
-        # Crear malla 2D para el cálculo del potencial
-        x = np.linspace(-8.0, 8.0, 400)
-        y = np.linspace(-8.0, 8.0, 400)
+        Parámetros:
+        -----------
+        """
+
+        k = COEFICIENTE_ELECTRICO
+        cargas = list(self.calculo.cargas.values())
+
+        # Crear malla 2D
+        x = np.linspace(self.rango_x[0], self.rango_x[1], 500)
+        y = np.linspace(self.rango_x[0], self.rango_x[1], 500)
         X, Y = np.meshgrid(x, y)
 
-        # Calcular distancias a cada carga
-        dx = X[..., None] - xqs[None, None, :]
-        dy = Y[..., None] - yqs[None, None, :]
-        r = np.sqrt(dx**2 + dy**2)
-        
-        # Evitar división por cero cerca de las cargas
-        r[r < 0.1] = 0.1
-        
         # Calcular potencial total
-        V_total = (COEFICIENTE_ELECTRICO * qs[None, None, :] / r).sum(axis=-1)
+        V_total = np.zeros_like(X, dtype=float)
+        for c in cargas:
+            dx = X - c.x
+            dy = Y - c.y
+            r = np.sqrt(dx**2 + dy**2)
+            r[r == 0] = np.nan  # evitar singularidades
+            V_total += k * c.valor / r
 
-        # Crear el gráfico de equipotenciales
-        fig, ax = plt.subplots(figsize=(10, 10))
-        
-        # Dibujar líneas equipotenciales
-        levels = np.logspace(8, 12, 20)  # Niveles de potencial
-        levels = np.concatenate([-levels[::-1], levels])  # Incluir valores negativos
-        
-        contour = ax.contour(X, Y, V_total, levels=levels, colors='blue', alpha=0.6, linewidths=1)
-        ax.clabel(contour, inline=True, fontsize=8, fmt='%.1e')
-        
-        # Marcar las cargas
-        for j in range(qs.size):
-            color = "red" if qs[j] > 0 else "blue"
-            ax.scatter([xqs[j]], [yqs[j]], s=200, c=color, edgecolors="black", zorder=3)
-            
-            signo = "+" if qs[j] > 0 else "−"
-            ax.text(xqs[j], yqs[j], signo, fontsize=16, fontweight='bold', 
-                   ha='center', va='center', color='white', zorder=4)
-            
-            ax.text(xqs[j] + 0.3, yqs[j] + 0.3, f"q{j+1}={qs[j]}", fontsize=10, 
-                   bbox=dict(boxstyle="round,pad=0.2", facecolor="white", alpha=0.8))
+        # Graficar contornos
+        # Recortar rango de potencial para evitar saturación cerca de las cargas
+        levels = np.logspace(3, 8, 25)
+        levels = np.concatenate([-levels[::-1], levels])
 
-        ax.set_xlabel("x [m]")
-        ax.set_ylabel("y [m]")
-        ax.set_title("Líneas Equipotenciales (Superposición de todas las cargas)")
-        ax.set_aspect("equal", adjustable="box")
-        ax.grid(True, alpha=0.3)
-        plt.tight_layout()
-        
-        archivo = self._crear_nombre_archivo("equipotenciales")
-        plt.savefig(archivo, dpi=300, bbox_inches='tight')
-        print(f"Gráfico de equipotenciales guardado como '{archivo}'")
+        plt.figure(figsize=(8,6))
+        cont = plt.contour(X, Y, V_total, levels=levels, colors='blue', alpha=0.6, linewidths=1)
+        plt.clabel(cont, inline=True, fontsize=7, fmt="%.0e")
+
+        # Dibujar las cargas
+        for c in cargas:
+            color = "red" if c.valor > 0 else "blue"
+            plt.scatter(c.x, c.y, c=color, s=60, edgecolors="k", zorder=5)
+
+        plt.xlabel("x [m]")
+        plt.ylabel("y [m]")
+        plt.title("Líneas equipotenciales")
+        plt.axhline(0, color="gray", linewidth=0.5)
+        plt.axvline(0, color="gray", linewidth=0.5)
+        plt.gca().set_aspect("equal", adjustable="box")
+        plt.grid(alpha=0.2)
         plt.show()
