@@ -83,10 +83,10 @@ class Grafico:
         # Calcular campos
         for c in cargas:
             dx = x - c.x
-            dx[np.isclose(dx, 0.0)] = np.nan  # evitar /0
+            dx[np.isclose(dx, 0.0, atol=1e-2)] = np.nan  # evitar /0
             Ex = k * c.valor * dx / (np.abs(dx)**3)
             Ex_individuales.append(Ex)
-            Ex_total += np.nan_to_num(Ex, nan=0.0)
+            Ex_total += Ex
 
         # Graficar
         plt.figure(figsize=(10,6))
@@ -144,18 +144,18 @@ class Grafico:
             V = k * c.valor / np.abs(dx)
             V_individuales.append(V)
             V_total += np.nan_to_num(V, nan=0.0)
-
+  
         # Graficar
         plt.figure(figsize=(10,6))
 
-        if mostrar in ("individual", "ambos"):
+        if mostrar in "individual":
             for i, V in enumerate(V_individuales, start=1):
                 c = cargas[i-1]
                 q_microC = cargas[i-1].valor*1e6
                 plt.plot(x, V, linewidth=1.5,
                         label=f"V carga {i} (q={q_microC:.0f} μC, x={c.x} m)")
 
-        if mostrar in ("total", "ambos"):
+        if mostrar in "total":
             plt.plot(x, V_total, 'k', linewidth=2, label="V total (superposición)")
 
         # Referencias visuales
