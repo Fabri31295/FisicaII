@@ -59,9 +59,8 @@ class Calculo:
         print(f"Magnitud = {magnitud_total:.2e} N/C")
         print(f"Vector: E = {campo_x_total:.2e} i + {campo_y_total:.2e} j")
         
-        grafico.graficar_campo_electrico(campo_x_total, campo_y_total, magnitud_total,
-                                       carga_elegida.x, carga_elegida.y, idx_carga_elegida)
-        
+        grafico.graficar_campo_electrico("individual")
+        grafico.graficar_campo_electrico("total")
         grafico.graficar_lineas_campo()
         
         input("\nPresione Enter para continuar...")
