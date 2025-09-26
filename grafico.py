@@ -74,7 +74,7 @@ class Grafico:
         
         plt.show()
     
-    def graficar_campo_electrico(self, mostrar="ambos"):
+    def graficar_campo_electrico(self, mostrar="individual"):
         k = COEFICIENTE_ELECTRICO
         cargas = list(self.calculo.cargas.values())
 
@@ -117,128 +117,61 @@ class Grafico:
         plt.legend()
         plt.grid(alpha=0.3)
         plt.show()
-    
-    def graficar_potencial_individual(self, q_valor, q_x, q_y, idx_carga, potencial_punto):
-        """
-        Grafica el potencial eléctrico producido por una carga individual en función de x
-        
-        Parámetros:
-        - q_valor: valor de la carga
-        - q_x, q_y: posición de la carga
-        - idx_carga: índice de la carga
-        - potencial_punto: potencial calculado en el punto específico
-        """
-        x = np.linspace(-10.0, 10.0, 1000)
-        
-        # Calcular el potencial de esta carga individual a lo largo del eje x (y=0)
-        dx = x - q_x
-        dy = 0.0 - q_y
-        r = np.sqrt(dx**2 + dy**2)
-        r[r == 0] = np.inf  # Evitar división por cero
-        
-        V_individual = COEFICIENTE_ELECTRICO * q_valor / r
-        
-        # Crear el gráfico
-        plt.figure(figsize=(12, 6))
-        plt.plot(x, V_individual, linewidth=2, color='green',
-                 label=f"V de carga {idx_carga} (q={q_valor}, pos=({q_x},{q_y}))")
-        
-        # Marcar la posición de la carga
-        plt.axvline(q_x, color='red', linestyle='--', alpha=0.7, 
-                   label=f'Posición carga {idx_carga}')
-        
-        plt.axhline(0, linestyle="--", linewidth=0.8, color='black', alpha=0.5)
-        plt.xlabel("x [m]")
-        plt.ylabel("V(x) [V]")
-        plt.title(f"Potencial Individual V(x) - Carga {idx_carga}\n"
-                  f"Potencial calculado: V={potencial_punto:.2e} V")
-        plt.legend()
-        plt.grid(True, alpha=0.3)
-        plt.xlim(-5, 5)
-        plt.tight_layout()
-        
-        # Guardar gráfico
-        imagen = self._crear_nombre_archivo(f"potencial_individual_carga_{idx_carga}")
-        plt.savefig(imagen, dpi=300, bbox_inches='tight')
-        print(f"Gráfico individual guardado como '{imagen}'")
-        plt.show()
 
-    def graficar_potencial_electrico(self, potencial_total, punto_x, punto_y, idx_carga):
+    def graficar_potencial_electrico(self, mostrar="individual"):
         """
-        Grafica la superposición de todos los potenciales y las equipotenciales
-        
+        Grafica el potencial eléctrico V(x) sobre el eje x para un conjunto de cargas puntuales.
+
         Parámetros:
-        - potencial_total: potencial total calculado
-        - punto_x, punto_y: posición donde se calculó el potencial
-        - idx_carga: índice de la carga sobre la cual se calculó el potencial
+        -----------
+
+        mostrar : str
+            "individual" → solo potenciales de cada carga
+            "total"      → solo potencial total
         """
-        qs, xqs, yqs = self._cargas_numpy()
+        cargas = list(self.calculo.cargas.values())
         
-        x = np.linspace(-10.0, 10.0, 1000)
-        dx = x[:, None] - xqs[None, :]
-        dy = 0.0 - yqs[None, :]
-        r = np.sqrt(dx**2 + dy**2)
-        r[r == 0] = np.inf
-        
-        # Calcular potencial de cada carga individual
-        V_each = COEFICIENTE_ELECTRICO * qs[None, :] / r
-        
-        # Para la superposición, excluir la carga elegida
-        V_each_superposicion = V_each.copy()
-        V_each_superposicion[:, idx_carga - 1] = 0  # Excluir la carga elegida
-        V_total = V_each_superposicion.sum(axis=1)
-        
-        # PRIMER GRÁFICO: Potenciales individuales que contribuyen
-        fig1 = plt.figure(figsize=(14, 8))
-        for j in range(qs.size):
-            if j != idx_carga - 1:  # Solo mostrar cargas que contribuyen
-                plt.plot(x, V_each[:, j], linewidth=2, alpha=0.7,
-                         label=f"V carga {j+1} (q={qs[j]}, x={xqs[j]}, y={yqs[j]})")
-        
-        # Marcar posición donde se calculó el potencial
-        plt.axvline(punto_x, color='purple', linestyle=':', linewidth=2, alpha=0.8,
-                   label=f'Punto calculado (carga {idx_carga})')
-        
-        plt.axhline(0, linestyle="--", linewidth=0.8, color='black', alpha=0.5)
+        k = COEFICIENTE_ELECTRICO
+        x = np.linspace(self.rango_x[0], self.rango_x[1], self.n_puntos)
+
+        V_total = np.zeros_like(x)
+        V_individuales = []
+
+        # Calcular potenciales
+        for c in cargas:
+            dx = x - c.x
+            dx[np.isclose(dx, 0.0)] = np.nan  # evitar división por cero
+            V = k * c.valor / np.abs(dx)
+            V_individuales.append(V)
+            V_total += np.nan_to_num(V, nan=0.0)
+
+        # Graficar
+        plt.figure(figsize=(10,6))
+
+        if mostrar in ("individual", "ambos"):
+            for i, V in enumerate(V_individuales, start=1):
+                c = cargas[i-1]
+                q_microC = cargas[i-1].valor*1e6
+                plt.plot(x, V, linewidth=1.5,
+                        label=f"V carga {i} (q={q_microC:.0f} μC, x={c.x} m)")
+
+        if mostrar in ("total", "ambos"):
+            plt.plot(x, V_total, 'k', linewidth=2, label="V total (superposición)")
+
+        # Referencias visuales
+        plt.axhline(0, color="gray", linestyle="--", linewidth=0.8)
+        for c in cargas:
+            plt.axvline(c.x, color="red" if c.valor>0 else "blue",
+                        linestyle=":", linewidth=1)
+
+        plt.xlim(self.rango_x)
+        plt.ylim(self.ylim)
         plt.xlabel("x [m]")
-        plt.ylabel("V(x) [V]")
-        plt.title(f"Potenciales Individuales que Actúan sobre Carga {idx_carga}")
+        plt.ylabel("V(x) [Voltios]")
+        plt.title("Potencial eléctrico sobre el eje x")
         plt.legend()
-        plt.grid(True, alpha=0.3)
-        plt.xlim(-5, 5)
-        plt.tight_layout()
-        
-        imagen_1 = self._crear_nombre_archivo("potenciales_individuales_superposicion")
-        plt.savefig(imagen_1, dpi=300, bbox_inches='tight')
-        print(f"Gráfico guardado como '{imagen_1}'")
+        plt.grid(alpha=0.3)
         plt.show()
-        
-        # SEGUNDO GRÁFICO: Superposición total
-        fig2 = plt.figure(figsize=(14, 8))
-        plt.plot(x, V_total, linewidth=3, color='blue', 
-                 label="V SUPERPOSICIÓN (todas las cargas contribuyentes)")
-        
-        # Marcar posición donde se calculó el potencial
-        plt.axvline(punto_x, color='purple', linestyle=':', linewidth=2, alpha=0.8,
-                   label=f'Punto calculado: x={punto_x}m')
-        
-        plt.axhline(0, linestyle="--", linewidth=0.8, color='black', alpha=0.5)
-        plt.xlabel("x [m]")
-        plt.ylabel("V(x) [V]")
-        plt.title(f"Superposición Total - Potencial sobre Carga {idx_carga}\n"
-                  f"Resultado: V={potencial_total:.2e} V")
-        plt.legend()
-        plt.grid(True, alpha=0.3)
-        plt.xlim(-5, 5)
-        plt.tight_layout()
-        
-        imagen_2 = self._crear_nombre_archivo("potencial_superposicion_total")
-        plt.savefig(imagen_2, dpi=300, bbox_inches='tight')
-        print(f"Gráfico guardado como '{imagen_2}'")
-        plt.show()
-        
-        # TERCER GRÁFICO: Equipotenciales en 2D
-        self.graficar_equipotenciales()
 
     def graficar_equipotenciales(self):
         """

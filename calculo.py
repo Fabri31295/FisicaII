@@ -97,10 +97,6 @@ class Calculo:
                     print(f"Carga {idx}: q={carga_puntual.valor} C en ({carga_puntual.x}, {carga_puntual.y})")
                     print(f"  Potencial sobre carga {idx_carga_elegida}: V={potencial_individual:.2e} V")
                     
-                    # Graficar potencial individual
-                    #grafico.graficar_potencial_individual(carga_puntual.valor, carga_puntual.x, carga_puntual.y,
-                    #                                    idx, potencial_individual)
-                    
                     potencial_total += potencial_individual
 
         print(f"\n" + "="*50)
@@ -108,9 +104,11 @@ class Calculo:
         print(f"V = {potencial_total:.2e} V")
         print("="*50)
         
-        # Generar gráficos de superposición y equipotenciales
-        print(f"\nGenerando gráficos de superposición y equipotenciales...")
-        grafico.graficar_potencial_electrico(potencial_total, carga_elegida.x, carga_elegida.y, idx_carga_elegida)
+        # Generar gráficos de individuales, superposición y equipotenciales
+        print(f"\nGenerando gráficos ...")
+        grafico.graficar_potencial_electrico(mostrar="individual")
+        grafico.graficar_potencial_electrico(mostrar="total")
+        grafico.graficar_equipotenciales()
         
         input("\nPresione Enter para continuar...")
         
