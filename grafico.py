@@ -13,17 +13,6 @@ class Grafico:
     def __init__(self, calculo=None):
         self.calculo = calculo
     
-    def _cargas_numpy(self):
-        if self.calculo:
-            cargas = self.calculo.obtener_cargas()
-        else:
-            raise ValueError("No se ha proporcionado un objeto Calculo")
-        
-        qs  = np.array([float(c.valor) for c in cargas.values()], dtype=float)
-        xqs = np.array([float(c.x)     for c in cargas.values()], dtype=float)
-        yqs = np.array([float(c.y)     for c in cargas.values()], dtype=float)
-        return qs, xqs, yqs
-    
     def _crear_nombre_archivo(self, tipo_grafico):
         if not os.path.exists('Graficos'):
             os.makedirs('Graficos')
@@ -38,42 +27,49 @@ class Grafico:
         print(f"Gráfico guardado como '{archivo}'")
 
     def graficar_lineas_campo(self):
-        qs, xqs, yqs = self._cargas_numpy()
+        """
+        Grafica las líneas de campo eléctrico (streamlines) para un conjunto de cargas puntuales en 2D.
+        """
 
-        x = np.linspace(-10.0, 10.0, 300)
-        y = np.linspace(-10.0, 10.0, 300)
+        k = COEFICIENTE_ELECTRICO
+        cargas = list(self.calculo.cargas.values())
+
+        # Malla 2D
+        x = np.linspace(self.rango_x[0], self.rango_x[1], 500)
+        y = np.linspace(self.rango_x[0], self.rango_x[1], 500)
         X, Y = np.meshgrid(x, y)
 
-        dx = X[..., None] - xqs[None, None, :]
-        dy = Y[..., None] - yqs[None, None, :]
-        r  = np.sqrt(dx**2 + dy**2)
-        r[r == 0] = np.inf
+        # Componentes del campo
+        Ex = np.zeros_like(X, dtype=float)
+        Ey = np.zeros_like(Y, dtype=float)
 
-        Ex = (COEFICIENTE_ELECTRICO * qs[None, None, :] * dx / (r**3)).sum(axis=-1)
-        Ey = (COEFICIENTE_ELECTRICO * qs[None, None, :] * dy / (r**3)).sum(axis=-1)
+        for c in cargas:
+            dx = X - c.x
+            dy = Y - c.y
+            r2 = dx**2 + dy**2
+            r3 = np.power(r2, 1.5)
+            r3[r3 == 0] = np.nan  # evitar /0
 
-        fig, ax = plt.subplots(figsize=(7, 7))
-        ax.streamplot(X, Y, Ex, Ey, density=2, linewidth=0.8)
+            Ex += k * c.valor * dx / r3
+            Ey += k * c.valor * dy / r3
 
-        for j in range(qs.size):
-            color = "turquoise" if qs[j] > 0 else "red"
-            ax.scatter([xqs[j]], [yqs[j]], s=120, c=color, edgecolors="k", zorder=3)
-            
-            signo = "+" if qs[j] > 0 else "−"
-            ax.text(xqs[j], yqs[j], signo, fontsize=14, fontweight='bold', 
-                   ha='center', va='center', color='white', zorder=4)
-            
-            ax.text(xqs[j] + 0.2, yqs[j] + 0.2, f"q{j+1}", fontsize=9)
+        # Graficar líneas de campo
+        plt.figure(figsize=(8,6))
+        plt.streamplot(X, Y, Ex, Ey, color="darkgrey", linewidth=1, density=1.5, arrowsize=1.2)
 
-        ax.set_xlabel("x [m]")
-        ax.set_ylabel("y [m]")
-        ax.set_title("Líneas de campo eléctrico (superposición)")
-        ax.set_aspect("equal", adjustable="box")
-        ax.grid(True, alpha=0.2)
-        plt.tight_layout()
-        
+        # Dibujar las cargas
+        for c in cargas:
+            col = "red" if c.valor > 0 else "blue"
+            plt.scatter(c.x, c.y, c=col, s=60, edgecolors="k", zorder=5)
+
+        plt.xlabel("x [m]")
+        plt.ylabel("y [m]")
+        plt.title("Líneas de campo eléctrico")
+        plt.axhline(0, color="gray", linewidth=0.5)
+        plt.axvline(0, color="gray", linewidth=0.5)
+        plt.gca().set_aspect("equal", adjustable="box")
+        plt.grid(alpha=0.2)
         self._guardar_archivo(plt, "lineas_campo_electrico")
-
         plt.show()
     
     def graficar_campo_electrico(self, mostrar="individual"):
