@@ -101,6 +101,47 @@ class Grafico:
         if mostrar=="total":
             plt.plot(x, Ex_total, 'k', linewidth=2, label="E_x total (superposición)")
 
+        puntos_equilibrio = []
+
+        # Detectar TODOS los cambios de signo (incluyendo asíntotas)
+        cambios_de_signo_indices = np.where(np.diff(np.sign(Ex_total)))[0]
+
+        # Iterar sobre los cambios y filtrar singularidades
+        for i in cambios_de_signo_indices:
+            x_eq = np.nan
+            
+            # --- FILTRO CLAVE: Ignorar los cambios de signo que son asíntotas ---
+            # Verificamos si el punto 'i' o 'i+1' está cerca de alguna carga.
+            es_singularidad = False
+            for c in cargas:
+                # Si el punto de cruce está a menos de 0.05 m de una carga (ajusta este valor si es necesario)
+                if np.abs(x[i] - c.x) < 5e-2 or np.abs(x[i+1] - c.x) < 5e-2:
+                    es_singularidad = True
+                    break
+            
+            if es_singularidad:
+                continue # ¡Salta esta iteración porque es un pico!
+            # --------------------------------------------------------------------
+            
+            # Si pasa el filtro, es un Punto de Equilibrio real (cruce por cero)
+            
+            # Interpolación lineal (como antes)
+            x1, x2 = x[i], x[i+1]
+            y1, y2 = Ex_total[i], Ex_total[i+1]
+            x_eq = x1 - y1 * (x2 - x1) / (y2 - y1)
+            
+            # Filtrar duplicados
+            if all(np.abs(x_eq - p) > 1e-4 for p in puntos_equilibrio): # Usar 1e-4 para mayor precisión
+                puntos_equilibrio.append(x_eq)
+
+        # Marcar los puntos en el gráfico (Solo si mostramos la superposición)
+        if mostrar == "total" and puntos_equilibrio:
+            for i, x_eq in enumerate(puntos_equilibrio):
+                plt.plot(x_eq, 0, 'go', markersize=8, 
+                         label="Punto de Equilibrio" if i == 0 else None)
+                plt.axvline(x_eq, color='g', linestyle='--', linewidth=0.7)
+                print(f"Punto de Equilibrio encontrado: x = {x_eq:.4f} m")
+
         # Referencias visuales
         plt.axhline(0, color="gray", linestyle="--", linewidth=0.8)
         for c in cargas:
