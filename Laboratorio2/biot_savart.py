@@ -748,9 +748,9 @@ distancia radial.
         
         Bx_vec = np.zeros_like(X_vec)
         By_vec = np.zeros_like(Y_vec)
-        Bz_vec = np.zeros_like(Z_vec);
+        Bz_vec = np.zeros_like(Z_vec)
         
-        punto_original = self.punto.copy();
+        punto_original = self.punto.copy()
         
         for i in range(X_vec.shape[0]):
             for j in range(X_vec.shape[1]):
@@ -768,7 +768,7 @@ distancia radial.
                 By_vec[i,j] = B[1]
                 Bz_vec[i,j] = B[2]
         
-        self.punto = punto_original;
+        self.punto = punto_original
         
         # Normalizar vectores
         B_mag = np.sqrt(Bx_vec**2 + By_vec**2 + Bz_vec**2)
@@ -873,496 +873,738 @@ centro y disminuye con la distancia.
         plt.tight_layout()
         plt.show()
 
-    def cargar_datos_helmholtz(self):
-        """Carga los datos para las bobinas de Helmholtz"""
-        print("=== BOBINAS DE HELMHOLTZ ===\n")
+    def cargar_datos_alambre(self):
+        """Carga los datos específicos para el alambre"""
+        print("=== DATOS PARA ALAMBRE RECTO ===\n")
         
-        self.corriente_helmholtz = float(input("Ingrese la corriente I (en amperios): "))
-        self.radio_helmholtz = float(input("Ingrese el radio de las bobinas (en metros) [default: 3.0]: ") or "3.0")
-        
-        # La separación óptima para bobinas de Helmholtz es igual al radio
-        self.separacion_helmholtz = self.radio_helmholtz
+        self.corriente_alambre = float(input("Ingrese la corriente del alambre I (en amperios): "))
         
         punto_str = input("Ingrese el punto P donde calcular el campo (x y z): ")
         coords = punto_str.split()
         self.punto = np.array([float(coords[0]), float(coords[1]), float(coords[2])])
         
-        print(f"\nDatos cargados:")
-        print(f"Corriente: I = {self.corriente_helmholtz} A")
-        print(f"Radio de bobinas: R = {self.radio_helmholtz} m")
-        print(f"Separación entre bobinas: d = {self.separacion_helmholtz} m")
+        print(f"\nDatos del alambre cargados:")
+        print(f"Corriente alambre: I = {self.corriente_alambre} A")
         print(f"Punto: P = ({self.punto[0]}, {self.punto[1]}, {self.punto[2]}) m")
+        print(f"Alambre: L = 2 m en eje Z")
+
+    def cargar_datos_espira(self):
+        """Carga los datos específicos para la espira"""
+        print("=== DATOS PARA ESPIRA CIRCULAR ===\n")
         
-    def campo_bobinas_helmholtz(self, N=1000):
-        """
-        Calcula el campo magnético de las bobinas de Helmholtz
-        usando la ley de Biot-Savart
+        self.corriente_espira = float(input("Ingrese la corriente de la espira I (en amperios): "))
         
-        Las bobinas están centradas en z = ±R/2 (separación = R)
-        """
-        print(f"\n--- CAMPO DE BOBINAS DE HELMHOLTZ ---")
+        punto_str = input("Ingrese el punto P donde calcular el campo (x y z): ")
+        coords = punto_str.split()
+        self.punto = np.array([float(coords[0]), float(coords[1]), float(coords[2])])
         
-        # Posiciones de las bobinas (en el eje Z)
-        z_bobina1 = -self.separacion_helmholtz / 2
-        z_bobina2 = self.separacion_helmholtz / 2
+        print(f"\nDatos de la espira cargados:")
+        print(f"Corriente espira: I = {self.corriente_espira} A")
+        print(f"Punto: P = ({self.punto[0]}, {self.punto[1]}, {self.punto[2]}) m")
+        print(f"Espira: a = 3 m en plano XY")
+
+    def calcular_campo_alambre(self):
+        """Calcula el campo magnético del alambre"""
+        if not hasattr(self, 'corriente_alambre'):
+            print("Error: Primero debe cargar los datos del alambre")
+            return None
         
-        # Calcular campo de cada bobina por separado
-        punto_original = self.punto.copy()
+        # Configurar para cálculo del alambre
+        corriente_original = getattr(self, 'corriente', None)
+        self.corriente = self.corriente_alambre
         
-        # Campo de la bobina 1
-        self.punto = punto_original.copy()
-        B1 = self.campo_espira_en_posicion(self.radio_helmholtz, z_bobina1, N)
+        # Calcular campo
+        self.B_alambre = self.campo_alambre_recto(longitud=2.0, N=5000)
         
-        # Campo de la bobina 2
-        self.punto = punto_original.copy()
-        B2 = self.campo_espira_en_posicion(self.radio_helmholtz, z_bobina2, N)
+        # Restaurar corriente original si existía
+        if corriente_original is not None:
+            self.corriente = corriente_original
         
-        # Campo total (superposición)
-        B_total = B1 + B2
+        return self.B_alambre
+
+    def calcular_campo_espira(self):
+        """Calcula el campo magnético de la espira"""
+        if not hasattr(self, 'corriente_espira'):
+            print("Error: Primero debe cargar los datos de la espira")
+            return None
         
-        # Restaurar punto original
-        self.punto = punto_original
+        # Configurar para cálculo de la espira
+        corriente_original = getattr(self, 'corriente', None)
+        self.corriente = self.corriente_espira
         
-        return B1, B2, B_total
-    
-    def campo_espira_en_posicion(self, radio, z_espira, N=1000):
-        """
-        Calcula el campo magnético de una espira circular en una posición específica en Z
-        """
-        # Ángulos para dividir la espira
-        theta = np.linspace(0, 2*np.pi, N)
-        dtheta = theta[1] - theta[0]
+        # Calcular campo
+        self.B_espira = self.campo_espira_circular(radio=3.0, N=5000)
         
-        # Vector campo magnético total
-        B_total = np.array([0.0, 0.0, 0.0])
+        # Restaurar corriente original si existía
+        if corriente_original is not None:
+            self.corriente = corriente_original
         
-        # Punto donde calculamos el campo
-        x, y, z = self.punto[0], self.punto[1], self.punto[2]
+        return self.B_espira
+
+    def mostrar_resultados_alambre(self):
+        """Muestra los resultados del alambre"""
+        if not hasattr(self, 'B_alambre'):
+            print("Error: Primero debe calcular el campo del alambre")
+            return
         
-        for i in range(N):
-            # Posición del elemento de corriente en la espira
-            x_espira = radio * np.cos(theta[i])
-            y_espira = radio * np.sin(theta[i])
-            
-            # Vector del elemento de corriente dl
-            dl = np.array([-radio * np.sin(theta[i]) * dtheta,
-                          radio * np.cos(theta[i]) * dtheta,
-                          0.0])
-            
-            # Vector desde el elemento dl hasta el punto P
-            r_vector = np.array([x - x_espira, y - y_espira, z - z_espira])
-            r_magnitud = np.linalg.norm(r_vector)
-            
-            # Evitar división por cero
-            if r_magnitud < 1e-10:
-                continue
-                
-            # Ley de Biot-Savart: dB = (μ₀/4π) * I * (dl × r) / |r|³
-            dl_cross_r = np.cross(dl, r_vector)
-            dB = (MU_0 / (4 * np.pi)) * self.corriente_helmholtz * dl_cross_r / (r_magnitud**3)
-            
-            B_total += dB
-        
-        return B_total
-    
-    def mostrar_resultados_helmholtz(self, B1, B2, B_total):
-        """Muestra los resultados del cálculo de bobinas de Helmholtz"""
         print("\n" + "="*60)
-        print("                    RESULTADOS")
+        print("RESULTADOS DEL CAMPO MAGNÉTICO - ALAMBRE RECTO")
         print("="*60)
         
-        print(f"\n🔵 BOBINA 1 (z = {-self.separacion_helmholtz/2:.1f} m):")
-        print(f"   Bx = {B1[0]:.6e} T")
-        print(f"   By = {B1[1]:.6e} T")
-        print(f"   Bz = {B1[2]:.6e} T")
-        print(f"   |B1| = {np.linalg.norm(B1):.6e} T")
+        print(f"\nPunto de cálculo: P = ({self.punto[0]}, {self.punto[1]}, {self.punto[2]}) m")
+        print(f"Corriente: I = {self.corriente_alambre} A")
+        print(f"Longitud: L = 2 m (eje Z)")
         
-        print(f"\n🔴 BOBINA 2 (z = {self.separacion_helmholtz/2:.1f} m):")
-        print(f"   Bx = {B2[0]:.6e} T")
-        print(f"   By = {B2[1]:.6e} T")
-        print(f"   Bz = {B2[2]:.6e} T")
-        print(f"   |B2| = {np.linalg.norm(B2):.6e} T")
+        print(f"\nCampo magnético del alambre:")
+        print(f"   Bx = {self.B_alambre[0]:.6e} T")
+        print(f"   By = {self.B_alambre[1]:.6e} T")
+        print(f"   Bz = {self.B_alambre[2]:.6e} T")
+        print(f"   |B| = {np.linalg.norm(self.B_alambre):.6e} T")
         
-        print(f"\n🌟 CAMPO TOTAL (SUPERPOSICIÓN):")
-        print(f"   Bx = {B_total[0]:.6e} T")
-        print(f"   By = {B_total[1]:.6e} T")
-        print(f"   Bz = {B_total[2]:.6e} T")
-        print(f"   |B_total| = {np.linalg.norm(B_total):.6e} T")
-        
-        # Comparar magnitudes
-        reduccion_x = abs(B_total[0]) / max(abs(B1[0]), abs(B2[0])) if max(abs(B1[0]), abs(B2[0])) > 0 else 0
-        reduccion_y = abs(B_total[1]) / max(abs(B1[1]), abs(B2[1])) if max(abs(B1[1]), abs(B2[1])) > 0 else 0
-        
-        print(f"\n📊 ANÁLISIS DE UNIFORMIDAD:")
-        print(f"   • En el centro (0,0,0), el campo es muy uniforme")
-        print(f"   • Componentes transversales muy reducidas")
-        print(f"   • Campo principalmente en dirección Z")
-        print(f"   • Configuración óptima para campo uniforme")
+        print("\n¿Qué significa este resultado?")
+        print("- El alambre genera un campo circular perpendicular a su eje")
+        print("- La intensidad disminuye con la distancia radial al alambre")
+        print("- La dirección sigue la regla de la mano derecha")
+
+    def mostrar_resultados_espira(self):
+        """Muestra los resultados de la espira"""
+        if not hasattr(self, 'B_espira'):
+            print("Error: Primero debe calcular el campo de la espira")
+            return
         
         print("\n" + "="*60)
+        print("RESULTADOS DEL CAMPO MAGNÉTICO - ESPIRA CIRCULAR")
+        print("="*60)
+        
+        print(f"\nPunto de cálculo: P = ({self.punto[0]}, {self.punto[1]}, {self.punto[2]}) m")
+        print(f"Corriente: I = {self.corriente_espira} A")
+        print(f"Radio: a = 3 m (plano XY)")
+        
+        print(f"\nCampo magnético de la espira:")
+        print(f"   Bx = {self.B_espira[0]:.6e} T")
+        print(f"   By = {self.B_espira[1]:.6e} T")
+        print(f"   Bz = {self.B_espira[2]:.6e} T")
+        print(f"   |B| = {np.linalg.norm(self.B_espira):.6e} T")
+        
+        print("\n¿Qué significa este resultado?")
+        print("- La espira genera un campo dipolar magnético")
+        print("- El campo es máximo en el eje (componente Z)")
+        print("- La intensidad disminuye con la distancia al centro")
 
-    def graficar_configuracion_helmholtz(self):
-        """Grafica la configuración de las bobinas de Helmholtz"""
-        fig = plt.figure(figsize=(15, 10))
+    def graficar_configuracion_alambre(self):
+        """Grafica la configuración del alambre"""
+        if not hasattr(self, 'corriente_alambre'):
+            print("Error: Primero debe cargar los datos del alambre")
+            return
         
-        # Vista 3D
-        ax1 = fig.add_subplot(221, projection='3d')
+        fig = plt.figure(figsize=(12, 8))
         
-        # Dibujar las bobinas de Helmholtz
-        theta = np.linspace(0, 2*np.pi, 100)
+        # Gráfico 1: Vista 3D
+        ax1 = fig.add_subplot(121, projection='3d')
         
-        # Bobina 1 (z = -R/2)
-        x1 = self.radio_helmholtz * np.cos(theta)
-        y1 = self.radio_helmholtz * np.sin(theta)
-        z1 = np.full_like(theta, -self.separacion_helmholtz/2)
-        ax1.plot(x1, y1, z1, 'b-', linewidth=4, label='Bobina 1')
+        # Dibujar alambre
+        z_alambre = np.linspace(-1, 1, 100)
+        x_alambre = np.zeros_like(z_alambre)
+        y_alambre = np.zeros_like(z_alambre)
+        ax1.plot(x_alambre, y_alambre, z_alambre, 'r-', linewidth=6, label=f'Alambre I={self.corriente_alambre}A')
         
-        # Bobina 2 (z = +R/2)
-        x2 = self.radio_helmholtz * np.cos(theta)
-        y2 = self.radio_helmholtz * np.sin(theta)
-        z2 = np.full_like(theta, self.separacion_helmholtz/2)
-        ax1.plot(x2, y2, z2, 'r-', linewidth=4, label='Bobina 2')
-        
-        # Punto de cálculo
+        # Dibujar punto de cálculo
         ax1.scatter(self.punto[0], self.punto[1], self.punto[2], 
-                   color='green', s=100, marker='*', label='Punto P')
-        
-        # Líneas de conexión para mostrar la estructura
-        ax1.plot([0, 0], [0, 0], [-self.separacion_helmholtz/2, self.separacion_helmholtz/2], 
-                'k--', alpha=0.5, linewidth=1)
+                   color='blue', s=150, marker='*', 
+                   label=f'P({self.punto[0]:.1f},{self.punto[1]:.1f},{self.punto[2]:.1f})')
         
         ax1.set_xlabel('X (m)')
         ax1.set_ylabel('Y (m)')
         ax1.set_zlabel('Z (m)')
-        ax1.set_title('Bobinas de Helmholtz - Vista 3D')
+        ax1.set_title('Alambre Recto - Vista 3D')
+        ax1.legend()
+        ax1.grid(True)
+        ax1.set_xlim(-2, 2)
+        ax1.set_ylim(-2, 2)
+        ax1.set_zlim(-1.5, 1.5)
+        
+        # Gráfico 2: Información
+        ax2 = fig.add_subplot(122)
+        ax2.axis('off')
+        
+        info_text = f"""
+ALAMBRE RECTO - CONFIGURACIÓN
+
+Parámetros:
+• Corriente: I = {self.corriente_alambre} A
+• Longitud: L = 2 m
+• Orientación: Eje Z
+• Punto: P = ({self.punto[0]:.1f}, {self.punto[1]:.1f}, {self.punto[2]:.1f}) m
+
+Ley de Biot-Savart:
+dB⃗ = (μ₀/4π) × I × (dl⃗ × r⃗) / |r⃗|³
+
+Características del campo:
+• Líneas circulares concéntricas
+• Perpendiculares al alambre
+• Intensidad ∝ 1/r (distancia radial)
+
+Regla de la mano derecha:
+• Pulgar: dirección de corriente (+Z)
+• Dedos: dirección del campo (circular)
+        """
+        
+        ax2.text(0.05, 0.95, info_text, fontsize=11, 
+                verticalalignment='top', fontfamily='monospace',
+                bbox=dict(boxstyle="round,pad=0.3", facecolor='lightblue', alpha=0.3))
+        
+        plt.tight_layout()
+        plt.show()
+
+    def graficar_configuracion_espira(self):
+        """Grafica la configuración de la espira"""
+        if not hasattr(self, 'corriente_espira'):
+            print("Error: Primero debe cargar los datos de la espira")
+            return
+        
+        fig = plt.figure(figsize=(12, 8))
+        
+        # Gráfico 1: Vista 3D
+        ax1 = fig.add_subplot(121, projection='3d')
+        
+        # Dibujar espira
+        phi = np.linspace(0, 2*np.pi, 100)
+        x_esp = 3 * np.cos(phi)
+        y_esp = 3 * np.sin(phi)
+        z_esp = np.zeros_like(phi)
+        ax1.plot(x_esp, y_esp, z_esp, 'g-', linewidth=6, label=f'Espira I={self.corriente_espira}A')
+        
+        # Dibujar punto de cálculo
+        ax1.scatter(self.punto[0], self.punto[1], self.punto[2], 
+                   color='blue', s=150, marker='*', 
+                   label=f'P({self.punto[0]:.1f},{self.punto[1]:.1f},{self.punto[2]:.1f})')
+        
+        ax1.set_xlabel('X (m)')
+        ax1.set_ylabel('Y (m)')
+        ax1.set_zlabel('Z (m)')
+        ax1.set_title('Espira Circular - Vista 3D')
+        ax1.legend()
+        ax1.grid(True)
+        ax1.set_xlim(-4, 4)
+        ax1.set_ylim(-4, 4)
+        ax1.set_zlim(-2, 2)
+        
+        # Gráfico 2: Información
+        ax2 = fig.add_subplot(122)
+        ax2.axis('off')
+        
+        info_text = f"""
+ESPIRA CIRCULAR - CONFIGURACIÓN
+
+Parámetros:
+• Corriente: I = {self.corriente_espira} A
+• Radio: a = 3 m
+• Plano: XY (z = 0)
+• Punto: P = ({self.punto[0]:.1f}, {self.punto[1]:.1f}, {self.punto[2]:.1f}) m
+
+Ley de Biot-Savart:
+dB⃗ = (μ₀/4π) × I × (dl⃗ × r⃗) / |r⃗|³
+
+Características del campo:
+• Patrón dipolar magnético
+• Líneas salen por un lado, entran por el otro
+• Máximo en el eje (componente Z)
+
+Campo en el centro:
+B₀ = μ₀I/(2a) = {(4*np.pi*1e-7*self.corriente)/(2*3):.2e} T
+
+Campo en el eje (z ≠ 0):
+B = μ₀Ia²/[2(a²+z²)^(3/2)]
+        """
+        
+        ax2.text(0.05, 0.95, info_text, fontsize=11, 
+                verticalalignment='top', fontfamily='monospace',
+                bbox=dict(boxstyle="round,pad=0.3", facecolor='lightgreen', alpha=0.3))
+        
+        plt.tight_layout()
+        plt.show()
+
+    def graficar_lineas_campo_2d_alambre(self):
+        """Grafica las líneas de campo 2D del alambre"""
+        if not hasattr(self, 'corriente_alambre'):
+            print("Error: Primero debe cargar los datos del alambre")
+            return
+        
+        # Configurar corriente para cálculo
+        corriente_original = getattr(self, 'corriente', None)
+        self.corriente = self.corriente_alambre
+        
+        # Llamar a la función existente
+        self.graficar_lineas_campo_alambre()
+        
+        # Restaurar corriente original
+        if corriente_original is not None:
+            self.corriente = corriente_original
+
+    def graficar_lineas_campo_2d_espira(self):
+        """Grafica las líneas de campo 2D de la espira"""
+        if not hasattr(self, 'corriente_espira'):
+            print("Error: Primero debe cargar los datos de la espira")
+            return
+        
+        # Configurar corriente para cálculo
+        corriente_original = getattr(self, 'corriente', None)
+        self.corriente = self.corriente_espira
+        
+        # Llamar a la función existente
+        self.graficar_lineas_campo_espira()
+        
+        # Restaurar corriente original
+        if corriente_original is not None:
+            self.corriente = corriente_original
+
+    def graficar_lineas_campo_espira(self):
+        """Grafica las líneas de campo magnético de la espira circular"""
+        print("Generando visualización del campo magnético para espira circular...")
+        
+        # Calcular campo en grilla
+        X, Y, Z, Bx, By, Bz = self.calcular_campo_en_grilla('espira', rango=6, resolucion=15)
+        
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 8))
+        
+        # Gráfico 1: Vista lateral (plano XZ) - Vectores de campo
+        magnitud = np.sqrt(Bx**2 + By**2 + Bz**2)
+        magnitud[magnitud == 0] = 1e-10  # Evitar división por cero
+        
+        # Normalizar vectores para mejor visualización
+        Bx_norm = Bx / magnitud
+        Bz_norm = Bz / magnitud
+        
+        # Dibujar vectores de campo
+        skip = 1
+        im1 = ax1.quiver(X[::skip,::skip], Z[::skip,::skip], 
+                        Bx_norm[::skip,::skip], Bz_norm[::skip,::skip],
+                        magnitud[::skip,::skip], 
+                        cmap='plasma', scale=20, alpha=0.8)
+        
+        # Dibujar espira (vista lateral)
+        ax1.plot([-3, 3], [0, 0], 'g-', linewidth=6, label='Espira (I)', zorder=5)
+        ax1.plot([-3, 3], [0, 0], 'w-', linewidth=2, zorder=6)
+        
+        # Puntos en los extremos de la espira
+        ax1.scatter([-3, 3], [0, 0], color='green', s=100, zorder=7)
+        
+        # Punto de cálculo original
+        punto_original = self.punto
+        if abs(punto_original[1]) < 0.5:  # Si está cerca del plano y=0
+            ax1.scatter(punto_original[0], punto_original[2], 
+                       color='blue', s=150, marker='*', 
+                       label=f'Punto P({punto_original[0]:.1f},{punto_original[1]:.1f},{punto_original[2]:.1f})',
+                       zorder=7, edgecolor='white', linewidth=2)
+        
+        ax1.set_xlabel('X (m)', fontsize=12)
+        ax1.set_ylabel('Z (m)', fontsize=12)
+        ax1.set_title('Campo Magnético - Espira Circular\n(Vista lateral, plano Y=0)', fontsize=14)
+        ax1.grid(True, alpha=0.3)
+        ax1.set_aspect('equal')
         ax1.legend()
         
-        # Vista lateral (XZ)
-        ax2 = fig.add_subplot(222)
+        # Barra de color
+        cbar1 = plt.colorbar(im1, ax=ax1)
+        cbar1.set_label('|B| (T)', fontsize=12)
         
-        # Bobinas vistas de lado
-        ax2.plot([-self.radio_helmholtz, self.radio_helmholtz], 
-                [-self.separacion_helmholtz/2, -self.separacion_helmholtz/2], 'b-', linewidth=6, label='Bobina 1')
-        ax2.plot([-self.radio_helmholtz, self.radio_helmholtz], 
-                [self.separacion_helmholtz/2, self.separacion_helmholtz/2], 'r-', linewidth=6, label='Bobina 2')
+        # Gráfico 2: Vista superior (plano XY) mostrando la espira
+        ax2_angles = np.linspace(0, 2*np.pi, 100)
+        espira_x = 3 * np.cos(ax2_angles)
+        espira_y = 3 * np.sin(ax2_angles)
         
-        # Punto de cálculo
-        ax2.scatter(self.punto[0], self.punto[2], color='green', s=100, marker='*', label='Punto P')
+        # Dibujar espira
+        ax2.plot(espira_x, espira_y, 'g-', linewidth=6, label='Espira (I)')
+        ax2.plot(espira_x, espira_y, 'w-', linewidth=2)
+        
+        # Dibujar algunas líneas de campo características de una espira
+        # (patrón dipolar)
+        theta_lines = np.linspace(0, 2*np.pi, 8)
+        for theta in theta_lines:
+            # Líneas que salen del centro hacia afuera
+            r_line = np.linspace(0.5, 5, 50)
+            x_line = r_line * np.cos(theta)
+            y_line = r_line * np.sin(theta)
+            ax2.plot(x_line, y_line, 'b--', alpha=0.4, linewidth=1)
+        
+        # Flechas indicando dirección del campo en el eje
+        ax2.annotate('', xy=(0, 0.5), xytext=(0, -0.5),
+                    arrowprops=dict(arrowstyle='->', color='red', lw=3))
+        ax2.text(0.2, 0, 'B (hacia arriba)', fontsize=10, color='red')
+        
+        ax2.set_xlabel('X (m)', fontsize=12)
+        ax2.set_ylabel('Y (m)', fontsize=12)
+        ax2.set_title('Espira Circular\n(Vista superior, plano Z=0)', fontsize=14)
+        ax2.grid(True, alpha=0.3)
+        ax2.set_aspect('equal')
+        ax2.legend()
+        ax2.set_xlim(-6, 6)
+        ax2.set_ylim(-6, 6)
+        
+        plt.tight_layout()
+        plt.show()
+
+    def graficar_configuracion(self):
+        """Grafica la configuración básica del problema"""
+        fig = plt.figure(figsize=(15, 5))
+        
+        # Gráfico 1: Alambre recto
+        ax1 = fig.add_subplot(131, projection='3d')
+        
+        # Dibujar alambre
+        z_alambre = np.linspace(-1, 1, 100)
+        x_alambre = np.zeros_like(z_alambre)
+        y_alambre = np.zeros_like(z_alambre)
+        ax1.plot(x_alambre, y_alambre, z_alambre, 'r-', linewidth=3, label='Alambre (I)')
+        
+        # Dibujar punto
+        ax1.scatter(self.punto[0], self.punto[1], self.punto[2], 
+                   color='blue', s=100, label=f'Punto P({self.punto[0]},{self.punto[1]},{self.punto[2]})')
+        
+        ax1.set_xlabel('X (m)')
+        ax1.set_ylabel('Y (m)')
+        ax1.set_zlabel('Z (m)')
+        ax1.set_title('Alambre Recto\n(L = 2 m)')
+        ax1.legend()
+        ax1.grid(True)
+        
+        # Gráfico 2: Espira circular
+        ax2 = fig.add_subplot(132, projection='3d')
+        
+        # Dibujar espira
+        phi = np.linspace(0, 2*np.pi, 100)
+        x_esp = 3 * np.cos(phi)  # radio = 3
+        y_esp = 3 * np.sin(phi)
+        z_esp = np.zeros_like(phi)
+        ax2.plot(x_esp, y_esp, z_esp, 'g-', linewidth=3, label='Espira (I)')
+        
+        # Dibujar punto
+        ax2.scatter(self.punto[0], self.punto[1], self.punto[2], 
+                   color='blue', s=100, label=f'Punto P({self.punto[0]},{self.punto[1]},{self.punto[2]})')
         
         ax2.set_xlabel('X (m)')
-        ax2.set_ylabel('Z (m)')
-        ax2.set_title('Vista Lateral (XZ)')
-        ax2.grid(True, alpha=0.3)
+        ax2.set_ylabel('Y (m)')
+        ax2.set_zlabel('Z (m)')
+        ax2.set_title('Espira Circular\n(a = 3 m)')
         ax2.legend()
-        ax2.set_aspect('equal')
+        ax2.grid(True)
         
-        # Vista superior (XY)
-        ax3 = fig.add_subplot(223)
+               
+        # Gráfico 3: Información
+        ax3 = fig.add_subplot(133)
+        ax3.axis('off')
         
-        # Proyección de las bobinas
-        circle1 = plt.Circle((0, 0), self.radio_helmholtz, fill=False, color='blue', linewidth=3, alpha=0.7)
-        circle2 = plt.Circle((0, 0), self.radio_helmholtz, fill=False, color='red', linewidth=3, alpha=0.7, linestyle='--')
-        ax3.add_patch(circle1)
-        ax3.add_patch(circle2)
+        info_text = f"""
+LEY DE BIOT-SAVART
+
+dB = (μ₀/4π) × I × (dl × r) / |r|³
+
+Donde:
+• μ₀ = 4π × 10⁻⁷ T·m/A
+• I = {self.corriente} A
+• dl = elemento de longitud
+• r = vector posición
+• P = ({self.punto[0]}, {self.punto[1]}, {self.punto[2]}) m
+
+El campo total se obtiene
+integrando sobre toda la
+geometría del conductor.
+        """
+        
+        ax3.text(0.1, 0.5, info_text, fontsize=10, 
+                verticalalignment='center', fontfamily='monospace')
+        
+        plt.tight_layout()
+        plt.show()
+
+
+    def graficar_lineas_campo_3d_alambre(self):
+        """Grafica las líneas de campo magnético del alambre recto en 3D"""
+        print("Generando visualización 3D del campo magnético para alambre recto...")
+        
+        fig = plt.figure(figsize=(15, 12))
+        
+        # Gráfico 1: Líneas de campo circulares en 3D
+        ax1 = fig.add_subplot(221, projection='3d')
+        
+        # Dibujar alambre
+        z_alambre = np.linspace(-1, 1, 100)
+        x_alambre = np.zeros_like(z_alambre)
+        y_alambre = np.zeros_like(z_alambre)
+        ax1.plot(x_alambre, y_alambre, z_alambre, 'r-', linewidth=6, label='Alambre (I)', zorder=10)
+        
+        # Generar líneas de campo circulares a diferentes alturas z
+        radios = [0.5, 1.0, 1.5, 2.0, 2.5]
+        alturas = np.linspace(-0.8, 0.8, 5)
+        theta = np.linspace(0, 2*np.pi, 100)
+        
+        colors = plt.cm.plasma(np.linspace(0, 1, len(radios)))
+        
+        for i, r in enumerate(radios):
+            for z_nivel in alturas:
+                x_circ = r * np.cos(theta)
+                y_circ = r * np.sin(theta)
+                z_circ = np.full_like(theta, z_nivel)
+                
+                ax1.plot(x_circ, y_circ, z_circ, color=colors[i], 
+                        alpha=0.7, linewidth=2)
+                
+                # Agregar flechas direccionales cada 60 grados
+                for angle_idx in range(0, len(theta), len(theta)//6):
+                    angle = theta[angle_idx]
+                    x_arrow = r * np.cos(angle)
+                    y_arrow = r * np.sin(angle)
+                    z_arrow = z_nivel
+                    
+                    # Dirección tangencial (perpendicular al radio)
+                    dx = -np.sin(angle) * 0.2
+                    dy = np.cos(angle) * 0.2
+                    dz = 0
+                    
+                    ax1.quiver(x_arrow, y_arrow, z_arrow, dx, dy, dz,
+                             color='green', arrow_length_ratio=0.3, alpha=0.8)
         
         # Punto de cálculo
-        ax3.scatter(self.punto[0], self.punto[1], color='green', s=100, marker='*', label='Punto P')
+        ax1.scatter(self.punto[0], self.punto[1], self.punto[2], 
+                   color='blue', s=150, marker='*', 
+                   label=f'P({self.punto[0]:.1f},{self.punto[1]:.1f},{self.punto[2]:.1f})',
+                   zorder=15)
+        
+        ax1.set_xlabel('X (m)')
+        ax1.set_ylabel('Y (m)')
+        ax1.set_zlabel('Z (m)')
+        ax1.set_title('Líneas de Campo 3D - Alambre Recto')
+        ax1.legend()
+        ax1.set_xlim(-3, 3)
+        ax1.set_ylim(-3, 3)
+        ax1.set_zlim(-1.5, 1.5)
+        
+        # Gráfico 2: Campo vectorial en plano XY
+        ax2 = fig.add_subplot(222, projection='3d')
+        
+        # Crear grilla para vectores
+        x_grid = np.linspace(-2.5, 2.5, 8)
+        y_grid = np.linspace(-2.5, 2.5, 8)
+        z_levels = [-0.5, 0, 0.5]
+        
+        # Dibujar alambre
+        ax2.plot(x_alambre, y_alambre, z_alambre, 'r-', linewidth=6, label='Alambre (I)')
+        
+        for z_level in z_levels:
+            X_grid, Y_grid = np.meshgrid(x_grid, y_grid)
+            Z_grid = np.full_like(X_grid, z_level)
+            
+            Bx_grid = np.zeros_like(X_grid)
+            By_grid = np.zeros_like(Y_grid)
+            Bz_grid = np.zeros_like(Z_grid)
+            
+            punto_original = self.punto.copy()
+            
+            for i in range(X_grid.shape[0]):
+                for j in range(X_grid.shape[1]):
+                    x_pos, y_pos, z_pos = X_grid[i,j], Y_grid[i,j], Z_grid[i,j]
+                    
+                    # Evitar puntos muy cerca del alambre
+                    if np.sqrt(x_pos**2 + y_pos**2) < 0.3:
+                        continue
+                    
+                    self.punto = np.array([x_pos, y_pos, z_pos])
+                    B = self.campo_alambre_recto(longitud=2.0, N=500)
+                    
+                    Bx_grid[i,j] = B[0]
+                    By_grid[i,j] = B[1]
+                    Bz_grid[i,j] = B[2]
+            
+            self.punto = punto_original
+            
+            # Normalizar para visualización
+            B_mag = np.sqrt(Bx_grid**2 + By_grid**2 + Bz_grid**2)
+            B_mag[B_mag == 0] = 1e-10
+            
+            scale_factor = 0.3
+            ax2.quiver(X_grid, Y_grid, Z_grid, 
+                      Bx_grid/B_mag*scale_factor, By_grid/B_mag*scale_factor, Bz_grid/B_mag*scale_factor,
+                      color='blue' if z_level == 0 else 'cyan', alpha=0.8, arrow_length_ratio=0.2)
+        
+        ax2.set_xlabel('X (m)')
+        ax2.set_ylabel('Y (m)')
+        ax2.set_zlabel('Z (m)')
+        ax2.set_title('Campo Vectorial 3D - Alambre Recto')
+        ax2.legend()
+        
+        # Gráfico 3: Vista superior con intensidad de campo
+        ax3 = fig.add_subplot(223)
+        
+        # Calcular intensidad en plano z=0
+        x_intensity = np.linspace(-3, 3, 50)
+        y_intensity = np.linspace(-3, 3, 50)
+        X_int, Y_int = np.meshgrid(x_intensity, y_intensity)
+        
+        B_intensity = np.zeros_like(X_int)
+        punto_original = self.punto.copy()
+        
+        for i in range(X_int.shape[0]):
+            for j in range(X_int.shape[1]):
+                x_pos, y_pos = X_int[i,j], Y_int[i,j]
+                
+                if np.sqrt(x_pos**2 + y_pos**2) < 0.1:
+                    B_intensity[i,j] = np.nan
+                    continue
+                
+                self.punto = np.array([x_pos, y_pos, 0])
+                B = self.campo_alambre_recto(longitud=2.0, N=300)
+                B_intensity[i,j] = np.log10(np.linalg.norm(B) + 1e-12)
+        
+        self.punto = punto_original
+        
+        # Mapa de contorno
+        contour = ax3.contourf(X_int, Y_int, B_intensity, levels=20, cmap='plasma')
+        ax3.contour(X_int, Y_int, B_intensity, levels=20, colors='black', alpha=0.3, linewidths=0.5)
+        
+        # Líneas de campo circulares (equipotenciales magnéticas)
+        for r in [0.5, 1.0, 1.5, 2.0, 2.5]:
+            circle_theta = np.linspace(0, 2*np.pi, 100)
+            x_circle = r * np.cos(circle_theta)
+            y_circle = r * np.sin(circle_theta)
+            ax3.plot(x_circle, y_circle, 'w--', alpha=0.6, linewidth=1)
         
         ax3.set_xlabel('X (m)')
         ax3.set_ylabel('Y (m)')
-        ax3.set_title('Vista Superior (XY)')
-        ax3.grid(True, alpha=0.3)
-        ax3.legend(['Bobina 1', 'Bobina 2', 'Punto P'])
+        ax3.set_title('Intensidad del Campo Magnético')
         ax3.set_aspect('equal')
-        ax3.set_xlim(-self.radio_helmholtz*1.5, self.radio_helmholtz*1.5)
-        ax3.set_ylim(-self.radio_helmholtz*1.5, self.radio_helmholtz*1.5)
         
-        # Información
+        # Agregar texto indicativo de la posición del alambre
+        ax3.text(0.02, 0.98, '', 
+                transform=ax3.transAxes, fontsize=8, 
+                verticalalignment='top', 
+                bbox=dict(boxstyle="round,pad=0.3", facecolor='white', alpha=0.8))
+        
+        plt.colorbar(contour, ax=ax3, label='log₁₀|B| (T)')
+        
+        # Gráfico 4: Información y teoría
         ax4 = fig.add_subplot(224)
         ax4.axis('off')
         
         info_text = f"""
-BOBINAS DE HELMHOLTZ
+ALAMBRE RECTO - CAMPO MAGNÉTICO 3D
 
-Características:
-• Radio: R = {self.radio_helmholtz} m
-• Separación: d = {self.separacion_helmholtz} m
-• Corriente: I = {self.corriente_helmholtz} A
-• Punto: P = ({self.punto[0]:.1f}, {self.punto[1]:.1f}, {self.punto[2]:.1f}) m
+Ley de Biot-Savart:
+dB = (μ₀/4π) × I × (dl × r) / |r|³
 
-Propiedades especiales:
-• d = R (separación óptima = radio)
-• Campo muy uniforme en la región central
-• Gradiente de campo mínimo
-• Configuración estándar en laboratorios
+Características del alambre:
+• Longitud: L = 2 m
+• Corriente: I = {self.corriente} A
+• Orientación: Eje Z
 
-Aplicaciones:
-• Calibración de instrumentos magnéticos
-• Experimentos de física atómica
-• Anulación del campo magnético terrestre
-• Estudios de propiedades magnéticas
+Patrón del campo:
+• Líneas circulares concéntricas
+• Perpendiculares al alambre
+• Intensidad ∝ 1/r
 
-Campo en el centro:
-B₀ = (8μ₀IR²)/(5√5 R³) = (8μ₀I)/(5√5 R)
+Regla de la mano derecha:
+• Pulgar: dirección de corriente
+• Dedos: dirección del campo
 
-Las bobinas de Helmholtz son la configuración
-estándar para generar campos magnéticos
-uniformes en el laboratorio.
+Punto de cálculo:
+P = ({self.punto[0]:.1f}, {self.punto[1]:.1f}, {self.punto[2]:.1f}) m
+
+El campo es más intenso cerca
+del alambre y decrece con la
+distancia radial.
         """
         
-        ax4.text(0.05, 0.95, info_text, fontsize=9, 
+        ax4.text(0.05, 0.95, info_text, fontsize=10, 
                 verticalalignment='top', fontfamily='monospace',
-                bbox=dict(boxstyle="round,pad=0.3", facecolor='lightcyan', alpha=0.8))
+                bbox=dict(boxstyle="round,pad=0.3", facecolor='lightblue', alpha=0.5))
         
         plt.tight_layout()
         plt.show()
 
-    def graficar_lineas_campo_helmholtz(self):
-        """Grafica las líneas de campo magnético de las bobinas de Helmholtz"""
-        print("Generando visualización del campo magnético para bobinas de Helmholtz...")
+    def graficar_lineas_campo_3d_espira(self):
+        """Grafica las líneas de campo magnético de la espira circular en 3D"""
+        print("Generando visualización 3D del campo magnético para espira circular...")
         
-        fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16, 12))
+        fig = plt.figure(figsize=(16, 12))
         
-        # Calcular campo en grilla para visualización
-        X, Z, Bx, Bz = self.calcular_campo_helmholtz_grilla()
-        
-        # Gráfico 1: Líneas de campo (vista XZ)
-        magnitud = np.sqrt(Bx**2 + Bz**2)
-        magnitud[magnitud == 0] = 1e-10  # Evitar división por cero
-        
-        # Dibujar líneas de campo usando streamplot
-        ax1.streamplot(X, Z, Bx, Bz, density=1.5, color=magnitud, cmap='plasma', arrowsize=1.5)
-        
-        # Dibujar las bobinas
-        ax1.plot([-self.radio_helmholtz, self.radio_helmholtz], 
-                [-self.separacion_helmholtz/2, -self.separacion_helmholtz/2], 'b-', linewidth=8, label='Bobina 1')
-        ax1.plot([-self.radio_helmholtz, self.radio_helmholtz], 
-                [self.separacion_helmholtz/2, self.separacion_helmholtz/2], 'r-', linewidth=8, label='Bobina 2')
-        
-        ax1.set_xlabel('X (m)', fontsize=12)
-        ax1.set_ylabel('Z (m)', fontsize=12)
-        ax1.set_title('Líneas de Campo Magnético\n(Vista Lateral XZ)', fontsize=14)
-        ax1.grid(True, alpha=0.3)
-        ax1.legend()
-        ax1.set_aspect('equal')
-        
-        # Gráfico 2: Intensidad del campo
-        im2 = ax2.contourf(X, Z, magnitud, levels=20, cmap='viridis')
-        ax2.plot([-self.radio_helmholtz, self.radio_helmholtz], 
-                [-self.separacion_helmholtz/2, -self.separacion_helmholtz/2], 'w-', linewidth=6)
-        ax2.plot([-self.radio_helmholtz, self.radio_helmholtz], 
-                [self.separacion_helmholtz/2, self.separacion_helmholtz/2], 'w-', linewidth=6)
-        
-        ax2.set_xlabel('X (m)', fontsize=12)
-        ax2.set_ylabel('Z (m)', fontsize=12)
-        ax2.set_title('Intensidad del Campo |B|', fontsize=14)
-        cbar2 = plt.colorbar(im2, ax=ax2)
-        cbar2.set_label('|B| (T)', fontsize=12)
-        ax2.set_aspect('equal')
-        
-        # Gráfico 3: Campo a lo largo del eje Z
-        z_axis = np.linspace(-self.radio_helmholtz*2, self.radio_helmholtz*2, 100)
-        B_axis = []
-        
-        punto_original = self.punto.copy()
-        for z_val in z_axis:
-            self.punto = np.array([0, 0, z_val])
-            _, _, B_total = self.campo_bobinas_helmholtz(N=500)
-            B_axis.append(np.linalg.norm(B_total))
-        
-        self.punto = punto_original  # Restaurar punto original
-        
-        ax3.plot(z_axis, B_axis, 'g-', linewidth=3, label='|B| en eje Z')
-        ax3.axvline(-self.separacion_helmholtz/2, color='blue', linestyle='--', alpha=0.7, label='Bobina 1')
-        ax3.axvline(self.separacion_helmholtz/2, color='red', linestyle='--', alpha=0.7, label='Bobina 2')
-        ax3.axvline(0, color='black', linestyle='-', alpha=0.5, label='Centro')
-        
-        ax3.set_xlabel('Z (m)', fontsize=12)
-        ax3.set_ylabel('|B| (T)', fontsize=12)
-        ax3.set_title('Campo Magnético a lo largo del Eje Z', fontsize=14)
-        ax3.grid(True, alpha=0.3)
-        ax3.legend()
-        
-        # Gráfico 4: Análisis de uniformidad
-        ax4.axis('off')
-        
-        # Calcular campo en el centro
-        self.punto = np.array([0, 0, 0])
-        _, _, B_centro = self.campo_bobinas_helmholtz(N=1000)
-        self.punto = punto_original
-        
-        analysis_text = f"""
-ANÁLISIS DE UNIFORMIDAD
-
-Campo en el centro (0,0,0):
-• Bx = {B_centro[0]:.6e} T
-• By = {B_centro[1]:.6e} T  
-• Bz = {B_centro[2]:.6e} T
-• |B| = {np.linalg.norm(B_centro):.6e} T
-
-Características del campo:
-✓ Región central muy uniforme
-✓ Campo principalmente en dirección Z
-✓ Componentes transversales mínimas
-✓ Gradiente muy pequeño cerca del centro
-
-Comparación con campo teórico:
-B₀_teórico = (8μ₀I)/(5√5·R)
-B₀_teórico = {(8*MU_0*self.corriente_helmholtz)/(5*np.sqrt(5)*self.radio_helmholtz):.6e} T
-
-Error relativo: {abs(np.linalg.norm(B_centro) - (8*MU_0*self.corriente_helmholtz)/(5*np.sqrt(5)*self.radio_helmholtz)) / ((8*MU_0*self.corriente_helmholtz)/(5*np.sqrt(5)*self.radio_helmholtz)) * 100:.2f}%
-
-Las bobinas de Helmholtz proporcionan
-el campo más uniforme posible con
-dos bobinas circulares coaxiales.
-        """
-        
-        ax4.text(0.05, 0.95, analysis_text, fontsize=10, 
-                verticalalignment='top', fontfamily='monospace',
-                bbox=dict(boxstyle="round,pad=0.3", facecolor='lightgreen', alpha=0.8))
-        
-        plt.tight_layout()
-        plt.show()
-
-    def calcular_campo_helmholtz_grilla(self, rango=5, resolucion=25):
-        """Calcula el campo magnético en una grilla para visualización"""
-        x = np.linspace(-rango, rango, resolucion)
-        z = np.linspace(-rango, rango, resolucion)
-        X, Z = np.meshgrid(x, z)
-        
-        Bx = np.zeros_like(X)
-        Bz = np.zeros_like(Z)
-        
-        print(f"Calculando campo magnético en {resolucion}x{resolucion} puntos...")
-        
-        punto_original = self.punto.copy()
-        
-        for i in range(resolucion):
-            for j in range(resolucion):
-                self.punto = np.array([X[i,j], 0, Z[i,j]])  # Plano y=0
-                
-                try:
-                    _, _, B_total = self.campo_bobinas_helmholtz(N=200)  # Menos puntos para velocidad
-                    Bx[i,j] = B_total[0]
-                    Bz[i,j] = B_total[2]
-                except:
-                    Bx[i,j] = Bz[i,j] = 0
-        
-        self.punto = punto_original  # Restaurar punto original
-        return X, Z, Bx, Bz
-
-    def graficar_lineas_campo_combinado(self):
-        """Grafica las líneas de campo magnético de la configuración combinada alambre+espira"""
-        print("Generando visualización de líneas de campo para configuración combinada...")
-        print("Esto puede tomar un momento, por favor espere...")
-        
-        fig = plt.figure(figsize=(20, 12))
-        
-        # Gráfico 1: Vista 3D con líneas de campo combinadas
+        # Gráfico 1: Líneas de campo dipolar en 3D
         ax1 = fig.add_subplot(221, projection='3d')
         
-        # Dibujar alambre (eje Z)
-        z_alambre = np.linspace(-1, 1, 100)
-        x_alambre = np.zeros_like(z_alambre)
-        y_alambre = np.zeros_like(z_alambre)
-        ax1.plot(x_alambre, y_alambre, z_alambre, 'r-', linewidth=6, 
-                label=f'Alambre I1={self.corriente_alambre}A', zorder=10)
-        
-        # Dibujar espira (plano XY)
+        # Dibujar espira
         phi_espira = np.linspace(0, 2*np.pi, 100)
         x_espira = 3 * np.cos(phi_espira)
         y_espira = 3 * np.sin(phi_espira)
         z_espira = np.zeros_like(phi_espira)
-        ax1.plot(x_espira, y_espira, z_espira, 'g-', linewidth=8, 
-                label=f'Espira I2={self.corriente_espira}A', zorder=10)
+        ax1.plot(x_espira, y_espira, z_espira, 'g-', linewidth=8, label='Espira (I)', zorder=10)
         
-        # Generar líneas de campo combinadas
-        # Campo del alambre: líneas circulares
-        radios_alambre = [0.5, 1.0, 1.5, 2.0, 2.5]
-        alturas_alambre = np.linspace(-0.8, 0.8, 5)
-        theta = np.linspace(0, 2*np.pi, 100)
+        # Generar líneas de campo dipolar
+        # Líneas que salen del eje y se curvan
+        phi_lines = np.linspace(0, 2*np.pi, 8)
         
-        for r in radios_alambre:
-            for z_nivel in alturas_alambre:
-                # Evitar la región de la espira
-                if abs(z_nivel) > 0.1 or r > 3.3 or r < 2.7:
-                    x_circ = r * np.cos(theta)
-                    y_circ = r * np.sin(theta)
-                    z_circ = np.full_like(theta, z_nivel)
-                    ax1.plot(x_circ, y_circ, z_circ, 'blue', alpha=0.4, linewidth=1)
-        
-        # Campo de la espira: líneas dipolares
-        phi_dipolo = np.linspace(0, 2*np.pi, 8)
-        for phi in phi_dipolo:
-            t = np.linspace(0.5, 4, 40)
+        for phi in phi_lines:
+            # Líneas desde el centro hacia afuera y curvándose
+            t = np.linspace(0.1, 4, 50)
             
-            # Líneas superiores
-            for z_start in [0.3, 0.7, 1.2]:
+            # Líneas superiores (saliendo hacia arriba)
+            for z_start in [0.2, 0.5, 1.0]:
                 r = t
-                z_line = z_start + t**0.8
+                z_line = z_start + t**0.7
                 x_line = r * np.cos(phi)
                 y_line = r * np.sin(phi)
                 
-                # Evitar intersección con espira y alambre
-                mask = (r > 3.4) & (np.abs(z_line) > 0.2)
-                if np.any(mask):
-                    ax1.plot(x_line[mask], y_line[mask], z_line[mask], 
-                            'purple', alpha=0.6, linewidth=1.5)
+                # Solo mostrar líneas que no intersecten la espira
+                mask = (r > 3.2) | (np.abs(z_line) > 0.1)
                 
-                # Líneas inferiores
-                z_line_neg = -z_start - t**0.8
-                mask_neg = (r > 3.4) & (np.abs(z_line_neg) > 0.2)
-                if np.any(mask_neg):
-                    ax1.plot(x_line[mask_neg], y_line[mask_neg], z_line_neg[mask_neg], 
-                            'purple', alpha=0.6, linewidth=1.5)
+                ax1.plot(x_line[mask], y_line[mask], z_line[mask], 
+                        'b-', alpha=0.7, linewidth=1.5)
+                
+                # Líneas inferiores (entrando por abajo)
+                z_line_neg = -z_start - t**0.7
+                ax1.plot(x_line[mask], y_line[mask], z_line_neg[mask], 
+                        'b-', alpha=0.7, linewidth=1.5)
         
-        # Líneas en el eje Z (dominadas por la espira)
-        z_axis = np.linspace(-2.5, 2.5, 60)
+        # Líneas en el eje central
+        z_axis = np.linspace(-2, 2, 50)
         x_axis = np.zeros_like(z_axis)
         y_axis = np.zeros_like(z_axis)
-        # Evitar la región del alambre
-        mask_eje = np.abs(z_axis) > 1.1
-        ax1.plot(x_axis[mask_eje], y_axis[mask_eje], z_axis[mask_eje], 
-                'purple', linewidth=3, alpha=0.8)
+        ax1.plot(x_axis, y_axis, z_axis, 'b-', linewidth=3, alpha=0.8)
         
-        # Flechas direccionales en el eje
-        for z_arrow in [-2, -1.5, 1.5, 2]:
-            ax1.quiver(0, 0, z_arrow, 0, 0, 0.3,
-                     color='red', arrow_length_ratio=0.3, alpha=0.9, linewidth=2)
+        # Flechas en el eje indicando dirección
+        for z_arrow in [-1.5, -1, -0.5, 0.5, 1, 1.5]:
+            ax1.quiver(0, 0, z_arrow, 0, 0, 0.2,
+                     color='red', arrow_length_ratio=0.5, alpha=0.9, linewidth=2)
         
         # Punto de cálculo
         ax1.scatter(self.punto[0], self.punto[1], self.punto[2], 
-                   color='orange', s=200, marker='*', 
+                   color='blue', s=150, marker='*', 
                    label=f'P({self.punto[0]:.1f},{self.punto[1]:.1f},{self.punto[2]:.1f})',
-                   zorder=15, edgecolor='black', linewidth=2)
+                   zorder=15)
         
         ax1.set_xlabel('X (m)')
         ax1.set_ylabel('Y (m)')
         ax1.set_zlabel('Z (m)')
-        ax1.set_title('Líneas de Campo 3D - Configuración Combinada')
+        ax1.set_title('Líneas de Campo 3D - Espira Circular')
         ax1.legend()
-        ax1.set_xlim(-4, 4)
-        ax1.set_ylim(-4, 4)
+        ax1.set_xlim(-5, 5)
+        ax1.set_ylim(-5, 5)
         ax1.set_zlim(-3, 3)
         
-        # Gráfico 2: Campo vectorial combinado en plano XZ
+        # Gráfico 2: Campo vectorial en varios planos
         ax2 = fig.add_subplot(222, projection='3d')
         
-        # Dibujar configuración
-        ax2.plot(x_alambre, y_alambre, z_alambre, 'r-', linewidth=6, label='Alambre')
-        ax2.plot([-3, 3], [0, 0], [0, 0], 'g-', linewidth=6, label='Espira (vista lateral)')
+        # Dibujar espira
+        ax2.plot(x_espira, y_espira, z_espira, 'g-', linewidth=8, label='Espira (I)')
         
-        # Calcular campo vectorial combinado
-        x_vec = np.linspace(-4, 4, 10)
-        z_vec = np.linspace(-2.5, 2.5, 8)
+        # Crear grilla para vectores en el plano XZ (y=0)
+        x_vec = np.linspace(-4, 4, 8)
+        z_vec = np.linspace(-3, 3, 6)
         X_vec, Z_vec = np.meshgrid(x_vec, z_vec)
         Y_vec = np.zeros_like(X_vec)
         
-        Bx_total = np.zeros_like(X_vec)
-        By_total = np.zeros_like(Y_vec)
-        Bz_total = np.zeros_like(Z_vec);
+        Bx_vec = np.zeros_like(X_vec)
+        By_vec = np.zeros_like(Y_vec)
+        Bz_vec = np.zeros_like(Z_vec)
         
-        punto_original = self.punto.copy();
+        punto_original = self.punto.copy()
         
         for i in range(X_vec.shape[0]):
             for j in range(X_vec.shape[1]):
@@ -1380,7 +1622,7 @@ dos bobinas circulares coaxiales.
                 By_vec[i,j] = B[1]
                 Bz_vec[i,j] = B[2]
         
-        self.punto = punto_original;
+        self.punto = punto_original
         
         # Normalizar vectores
         B_mag = np.sqrt(Bx_vec**2 + By_vec**2 + Bz_vec**2)
@@ -1394,95 +1636,483 @@ dos bobinas circulares coaxiales.
         ax2.set_xlabel('X (m)')
         ax2.set_ylabel('Y (m)')
         ax2.set_zlabel('Z (m)')
-        ax2.set_title('Campo Vectorial Combinado\n(Plano XZ, Y=0)')
+        ax2.set_title('Campo Vectorial 3D - Espira Circular\n(Plano XZ, Y=0)')
         ax2.legend()
         
-        # Gráfico 3: Intensidad del campo combinado en plano XY
+        # Gráfico 3: Intensidad en el plano XZ
         ax3 = fig.add_subplot(223)
         
         x_int = np.linspace(-5, 5, 40)
-        y_int = np.linspace(-5, 5, 40)
-        X_int, Y_int = np.meshgrid(x_int, y_int)
+        z_int = np.linspace(-4, 4, 32)
+        X_int, Z_int = np.meshgrid(x_int, z_int)
         
         B_intensity = np.zeros_like(X_int)
         
         for i in range(X_int.shape[0]):
             for j in range(X_int.shape[1]):
-                x_pos, y_pos = X_int[i,j], Y_int[i,j]
+                x_pos, z_pos = X_int[i,j], Z_int[i,j]
                 
-                # Evitar la región del alambre y la espira
-                dist_alambre = np.sqrt(x_pos**2 + y_pos**2)
-                dist_espira = abs(np.sqrt(x_pos**2 + y_pos**2) - 3.0)
-                
-                if dist_alambre < 0.2 or dist_espira < 0.2:
+                # Evitar la región de la espira
+                dist_espira = abs(np.sqrt(x_pos**2) - 3.0)
+                if dist_espira < 0.3 and abs(z_pos) < 0.2:
                     B_intensity[i,j] = np.nan
                     continue
                 
-                self.punto = np.array([x_pos, y_pos, 0])
-                B_alambre, B_espira, B_total = self.campo_combinado(N=200)
-                B_intensity[i,j] = np.log10(np.linalg.norm(B_total) + 1e-12)
+                self.punto = np.array([x_pos, 0, z_pos])
+                B = self.campo_espira_circular(radio=3.0, N=300)
+                B_intensity[i,j] = np.log10(np.linalg.norm(B) + 1e-12)
         
         self.punto = punto_original
         
         # Mapa de contorno
-        contour = ax3.contourf(X_int, Y_int, B_intensity, levels=25, cmap='plasma')
-        ax3.contour(X_int, Y_int, B_intensity, levels=25, colors='black', alpha=0.2, linewidths=0.5)
+        contour = ax3.contourf(X_int, Z_int, B_intensity, levels=20, cmap='plasma')
+        ax3.contour(X_int, Z_int, B_intensity, levels=20, colors='black', alpha=0.3, linewidths=0.5)
         
-
-        
-        # Líneas de campo esquemáticas
-        theta_lines = np.linspace(0, 2*np.pi, 12)
-        for theta in theta_lines:
-            r_line = np.linspace(3.5, 4.8, 20)
-            x_line = r_line * np.cos(theta)
-            y_line = r_line * np.sin(theta)
-            ax3.plot(x_line, y_line, 'w--', alpha=0.5, linewidth=1)
+        # Líneas de campo esquemáticas (solo el eje dipolar)
+        ax3.annotate('', xy=(0, 1), xytext=(0, -1),
+                    arrowprops=dict(arrowstyle='<->', color='white', lw=2))
+        ax3.text(0.3, 0, 'Eje del dipolo', color='white', fontweight='bold')
         
         ax3.set_xlabel('X (m)')
-        ax3.set_ylabel('Y (m)')
-        ax3.set_title('Intensidad del Campo Combinado\n(Plano XY, Z=0)')
+        ax3.set_ylabel('Z (m)')
+        ax3.set_title('Intensidad del Campo Magnético')
         ax3.set_aspect('equal')
         
-        plt.colorbar(contour, ax=ax3, label='log₁₀|B| (T)')
+        # Agregar texto indicativo de la posición de la espira
+        ax3.text(0.02, 0.98, 'Espira: Radio=3m en Z=0\n(círculo en plano XY)', 
+                transform=ax3.transAxes, fontsize=8, 
+                verticalalignment='top', 
+                bbox=dict(boxstyle="round,pad=0.3", facecolor='white', alpha=0.8))
         
-        # Gráfico 4: Información
+        plt.colorbar(contour, ax=ax3, label='')
+        
+        # Gráfico 4: Información y teoría
         ax4 = fig.add_subplot(224)
         ax4.axis('off')
         
         info_text = f"""
-CONFIGURACIÓN COMBINADA
-ALAMBRE + ESPIRA
+ESPIRA CIRCULAR - CAMPO MAGNÉTICO 3D
 
-Características:
-• Alambre: I1 = {self.corriente_alambre} A, L = 2 m (eje Z)
-• Espira: I2 = {self.corriente_espira} A, a = 3 m (plano XY)
-• Punto: P = ({self.punto[0]:.1f}, {self.punto[1]:.1f}, {self.punto[2]:.1f}) m
+Ley de Biot-Savart:
+dB = (μ₀/4π) × I × (dl × r) / |r|³
 
-Patrón del campo combinado:
-• Cerca del alambre: líneas circulares dominantes
-• En el eje Z: campo dipolar de la espira
-• Región intermedia: superposición compleja
+Características de la espira:
+• Radio: a = 3 m
+• Corriente: I = {self.corriente} A
+• Plano: XY (z = 0)
 
-Interacciones:
-• Los campos se suman vectorialmente
-• En algunos puntos se refuerzan
-• En otros se debilitan o anulan
-• Patrón muy complejo y rico
+Patrón del campo:
+• Dipolo magnético
+• Líneas salen por un lado
+• Entran por el otro lado
+• Máximo en el eje (z)
 
-Ley de superposición:
-B⃗_total = B⃗_alambre + B⃗_espira
+Campo en el centro:
+B₀ = μ₀I/(2a) = {(4*np.pi*1e-7*self.corriente)/(2*3):.2e} T
 
-El campo resultante muestra la belleza
-de la interacción electromagnética entre
-diferentes geometrías de corriente.
+Campo en el eje (z ≠ 0):
+B = μ₀Ia²/[2(a²+z²)^(3/2)]
+
+Punto de cálculo:
+P = ({self.punto[0]:.1f}, {self.punto[1]:.1f}, {self.punto[2]:.1f}) m
+
+El campo es más intenso en el
+centro y disminuye con la distancia.
         """
         
-        ax4.text(0.05, 0.95, info_text, fontsize=10, 
+        ax4.text(0.05, 0.95, info_text, fontsize=9, 
                 verticalalignment='top', fontfamily='monospace',
-                bbox=dict(boxstyle="round,pad=0.3", facecolor='lightyellow', alpha=0.8))
+                bbox=dict(boxstyle="round,pad=0.3", facecolor='lightgreen', alpha=0.5))
         
         plt.tight_layout()
         plt.show()
+
+    def cargar_datos_combinado(self):
+        """Carga los datos para la configuración combinada alambre+espira"""
+        print("=== CONFIGURACIÓN COMBINADA: ALAMBRE + ESPIRA ===\n")
+        
+        print("El alambre estará ubicado en el eje Z (eje de la espira)")
+        print("La espira estará en el plano XY con centro en el origen")
+        print()
+        
+        self.corriente_alambre = float(input("Ingrese la corriente del alambre I1 (en amperios): "))
+        self.corriente_espira = float(input("Ingrese la corriente de la espira I2 (en amperios): "))
+        
+        punto_str = input("Ingrese el punto P donde calcular el campo (x y z): ")
+        coords = punto_str.split()
+        self.punto = np.array([float(coords[0]), float(coords[1]), float(coords[2])])
+        
+        print(f"\nDatos cargados:")
+        print(f"Corriente alambre: I1 = {self.corriente_alambre} A")
+        print(f"Corriente espira: I2 = {self.corriente_espira} A")
+        print(f"Punto: P = ({self.punto[0]}, {self.punto[1]}, {self.punto[2]}) m")
+        print(f"Alambre: L = 2 m en eje Z")
+        print(f"Espira: a = 3 m en plano XY")
+
+    def campo_combinado(self, longitud_alambre=2.0, radio_espira=3.0, N=5000):
+        """
+        Calcula el campo magnético total de alambre + espira
+        
+        Parámetros:
+        - longitud_alambre: longitud del alambre en metros
+        - radio_espira: radio de la espira en metros
+        - N: número de segmentos para la integración numérica
+        """
+        print(f"\n--- CAMPO COMBINADO: ALAMBRE (L={longitud_alambre}m) + ESPIRA (a={radio_espira}m) ---")
+        
+        # Calcular campo del alambre
+        punto_original = self.punto.copy()
+        corriente_original = getattr(self, 'corriente', None)
+        
+        # Configurar para alambre
+        self.corriente = self.corriente_alambre
+        B_alambre = self.campo_alambre_recto(longitud=longitud_alambre, N=N)
+        
+        # Configurar para espira
+        self.corriente = self.corriente_espira
+        B_espira = self.campo_espira_circular(radio=radio_espira, N=N)
+        
+        # Restaurar valores originales
+        self.punto = punto_original
+        if corriente_original is not None:
+            self.corriente = corriente_original
+        
+        # Campo total
+        B_total = B_alambre + B_espira
+        
+        return B_alambre, B_espira, B_total
+
+    def mostrar_resultados_combinado(self, B_alambre, B_espira, B_total):
+        """Muestra los resultados de la configuración combinada"""
+        print("\n" + "="*70)
+        print("RESULTADOS DEL CAMPO MAGNÉTICO COMBINADO")
+        print("="*70)
+        
+        print(f"\nPunto de cálculo: P = ({self.punto[0]}, {self.punto[1]}, {self.punto[2]}) m")
+        print(f"Corriente alambre: I1 = {self.corriente_alambre} A")
+        print(f"Corriente espira: I2 = {self.corriente_espira} A")
+        
+        print(f"\n1. ALAMBRE RECTO (L = 2 m, eje Z):")
+        print(f"   Bx = {B_alambre[0]:.6e} T")
+        print(f"   By = {B_alambre[1]:.6e} T") 
+        print(f"   Bz = {B_alambre[2]:.6e} T")
+        print(f"   |B| = {np.linalg.norm(B_alambre):.6e} T")
+        
+        print(f"\n2. ESPIRA CIRCULAR (a = 3 m, plano XY):")
+        print(f"   Bx = {B_espira[0]:.6e} T")
+        print(f"   By = {B_espira[1]:.6e} T")
+        print(f"   Bz = {B_espira[2]:.6e} T")
+        print(f"   |B| = {np.linalg.norm(B_espira):.6e} T")
+        
+        print(f"\n3. CAMPO TOTAL (ALAMBRE + ESPIRA):")
+        print(f"   Bx = {B_total[0]:.6e} T")
+        print(f"   By = {B_total[1]:.6e} T")
+        print(f"   Bz = {B_total[2]:.6e} T")
+        print(f"   |B| = {np.linalg.norm(B_total):.6e} T")
+        
+        print("\n¿Qué significa esta configuración?")
+        print("- El alambre genera campo circular perpendicular al eje Z")
+        print("- La espira genera campo dipolar principalmente en Z")
+        print("- El campo total es la superposición vectorial de ambos")
+        print("- En el eje Z (x=0, y=0): domina el campo de la espira")
+        print("- Fuera del eje: interacción compleja entre ambos campos")
+
+    def graficar_configuracion_combinada(self):
+        """Grafica la configuración combinada alambre+espira"""
+        fig = plt.figure(figsize=(18, 6))
+        
+        # Gráfico 1: Vista 3D de la configuración
+        ax1 = fig.add_subplot(131, projection='3d')
+        
+        # Dibujar alambre (eje Z)
+        z_alambre = np.linspace(-1, 1, 100)
+        x_alambre = np.zeros_like(z_alambre)
+        y_alambre = np.zeros_like(z_alambre)
+        ax1.plot(x_alambre, y_alambre, z_alambre, 'r-', linewidth=4, label=f'Alambre I1={self.corriente_alambre}A')
+        
+        # Dibujar espira (plano XY)
+        phi = np.linspace(0, 2*np.pi, 100)
+        x_esp = 3 * np.cos(phi)
+        y_esp = 3 * np.sin(phi)
+        z_esp = np.zeros_like(phi)
+        ax1.plot(x_esp, y_esp, z_esp, 'g-', linewidth=4, label=f'Espira I2={self.corriente_espira}A')
+        
+        # Dibujar punto de cálculo
+        ax1.scatter(self.punto[0], self.punto[1], self.punto[2], 
+                   color='blue', s=150, marker='*', 
+                   label=f'P({self.punto[0]:.1f},{self.punto[1]:.1f},{self.punto[2]:.1f})')
+        
+        # Marcar intersecciones del alambre con la espira
+        ax1.scatter([0, 0], [0, 0], [-3, 3], color='orange', s=100, marker='o', 
+                   label='Intersecciones')
+        
+        ax1.set_xlabel('X (m)')
+        ax1.set_ylabel('Y (m)')
+        ax1.set_zlabel('Z (m)')
+        ax1.set_title('Configuración Combinada\nAlambre + Espira')
+        ax1.legend()
+        ax1.grid(True)
+        ax1.set_xlim(-4, 4)
+        ax1.set_ylim(-4, 4)
+        ax1.set_zlim(-2, 2)
+        
+        # Gráfico 2: Vista superior (plano XY)
+        ax2 = fig.add_subplot(132)
+        
+        # Dibujar espira
+        ax2.plot(x_esp, y_esp, 'g-', linewidth=6, label=f'Espira I2={self.corriente_espira}A')
+        ax2.plot(x_esp, y_esp, 'w-', linewidth=2)
+        
+        # Marcar centro (donde está el alambre)
+        ax2.scatter(0, 0, color='red', s=200, marker='+', linewidth=4, 
+                   label=f'Alambre I1={self.corriente_alambre}A\n(perpendicular al plano)')
+        
+        # Punto de cálculo (si está cerca del plano Z=0)
+        if abs(self.punto[2]) < 0.5:
+            ax2.scatter(self.punto[0], self.punto[1], color='blue', s=150, marker='*',
+                       label=f'P({self.punto[0]:.1f},{self.punto[1]:.1f},{self.punto[2]:.1f})')
+        
+        ax2.set_xlabel('X (m)')
+        ax2.set_ylabel('Y (m)')
+        ax2.set_title('Vista Superior\n(Plano XY, Z=0)')
+        ax2.grid(True, alpha=0.3)
+        ax2.set_aspect('equal')
+        ax2.legend()
+        ax2.set_xlim(-4, 4)
+        ax2.set_ylim(-4, 4)
+        
+        # Gráfico 3: Vista lateral (plano XZ)
+        ax3 = fig.add_subplot(133)
+        
+        # Dibujar alambre
+        ax3.plot([0, 0], [-1, 1], 'r-', linewidth=6, label=f'Alambre I1={self.corriente_alambre}A')
+        ax3.plot([0, 0], [-1, 1], 'w-', linewidth=2)
+        
+        # Dibujar espira (vista lateral)
+        ax3.plot([-3, 3], [0, 0], 'g-', linewidth=6, label=f'Espira I2={self.corriente_espira}A')
+        ax3.plot([-3, 3], [0, 0], 'w-', linewidth=2)
+        ax3.scatter([-3, 3], [0, 0], color='green', s=100)
+        
+        # Punto de intersección
+        ax3.scatter(0, 0, color='orange', s=150, marker='o', label='Intersección')
+        
+        # Punto de cálculo (si está cerca del plano Y=0)
+        if abs(self.punto[1]) < 0.5:
+            ax3.scatter(self.punto[0], self.punto[2], color='blue', s=150, marker='*',
+                       label=f'P({self.punto[0]:.1f},{self.punto[1]:.1f},{self.punto[2]:.1f})')
+        
+        ax3.set_xlabel('X (m)')
+        ax3.set_ylabel('Z (m)')
+        ax3.set_title('Vista Lateral\n(Plano XZ, Y=0)')
+        ax3.grid(True, alpha=0.3)
+        ax3.set_aspect('equal')
+        ax3.legend()
+        ax3.set_xlim(-4, 4)
+        ax3.set_ylim(-2, 2)
+        
+        plt.tight_layout()
+        plt.show()
+
+    def graficar_lineas_campo_combinado(self):
+        """Grafica las líneas de campo magnético combinado en 2D y 3D solamente"""
+        print("Generando visualización del campo magnético combinado...")
+        print("Calculando líneas de campo 2D y 3D...")
+        
+        # Crear figura con solo 2 gráficos: 2D y 3D
+        fig = plt.figure(figsize=(16, 8))
+        fig.suptitle('LÍNEAS DE CAMPO MAGNÉTICO COMBINADO - ALAMBRE + ESPIRA', fontsize=16, fontweight='bold')
+        
+        # ===== VISUALIZACIÓN 2D =====
+        # Gráfico 1: Líneas de campo 2D en plano XY (z=0)
+        ax1 = fig.add_subplot(121)
+        
+        # Calcular campo 2D
+        x_2d = np.linspace(-4, 4, 30)
+        y_2d = np.linspace(-4, 4, 30)
+        X_2d, Y_2d = np.meshgrid(x_2d, y_2d)
+        
+        Bx_2d = np.zeros_like(X_2d)
+        By_2d = np.zeros_like(Y_2d)
+        
+        punto_original = self.punto.copy()
+        
+        for i in range(X_2d.shape[0]):
+            for j in range(X_2d.shape[1]):
+                x_pos, y_pos = X_2d[i,j], Y_2d[i,j]
+                
+                # Evitar singularidades
+                dist_alambre = np.sqrt(x_pos**2 + y_pos**2)
+                dist_espira = abs(np.sqrt(x_pos**2 + y_pos**2) - 3.0)
+                
+                if dist_alambre < 0.2 or dist_espira < 0.3:
+                    Bx_2d[i,j] = By_2d[i,j] = 0
+                    continue
+                
+                self.punto = np.array([x_pos, y_pos, 0])
+                try:
+                    B_alambre, B_espira, B_total = self.campo_combinado(N=100)
+                    Bx_2d[i,j] = B_total[0]
+                    By_2d[i,j] = B_total[1]
+                except:
+                    Bx_2d[i,j] = By_2d[i,j] = 0
+        
+        self.punto = punto_original
+        
+        # Streamplot 2D
+        magnitud_2d = np.sqrt(Bx_2d**2 + By_2d**2)
+        magnitud_2d[magnitud_2d == 0] = 1e-10
+        
+        stream = ax1.streamplot(X_2d, Y_2d, Bx_2d, By_2d, density=1.5, 
+                               color=magnitud_2d, cmap='plasma', arrowsize=1.2)
+        
+        # Dibujar configuración
+        theta = np.linspace(0, 2*np.pi, 100)
+        x_espira = 3 * np.cos(theta)
+        y_espira = 3 * np.sin(theta)
+        ax1.plot(x_espira, y_espira, 'b-', linewidth=4, label='Espira')
+        ax1.scatter(0, 0, color='red', s=150, marker='o', label='Alambre', zorder=5)
+        
+        ax1.set_xlabel('X (m)')
+        ax1.set_ylabel('Y (m)')
+        ax1.set_title('Líneas de Campo 2D (z=0)')
+        ax1.legend()
+        ax1.set_aspect('equal')
+        ax1.grid(True, alpha=0.3)
+        
+        # ===== VISUALIZACIÓN 3D =====
+        # Gráfico 2: Líneas de campo 3D calculadas numéricamente
+        ax2 = fig.add_subplot(122, projection='3d')
+        
+        print("Calculando trayectorias de líneas de campo 3D...")
+        
+        # Función para calcular campo en un punto
+        def calcular_campo_punto(x, y, z):
+            self.punto = np.array([x, y, z])
+            try:
+                # Evitar singularidades
+                dist_alambre = np.sqrt(x**2 + y**2)
+                dist_espira = abs(np.sqrt(x**2 + y**2) - 3.0)
+                
+                if dist_alambre < 0.15 or (dist_espira < 0.25 and abs(z) < 0.15):
+                    return np.array([0.0, 0.0, 0.0])
+                
+                B_alambre, B_espira, B_total = self.campo_combinado(N=80)
+                return B_total
+            except:
+                return np.array([0.0, 0.0, 0.0])
+        
+        # Función para trazar línea de campo
+        def trazar_linea_campo(x0, y0, z0, direccion=1, max_puntos=40, paso=0.08):
+            puntos = []
+            x, y, z = x0, y0, z0
+            
+            for _ in range(max_puntos):
+                B = calcular_campo_punto(x, y, z)
+                B_mag = np.linalg.norm(B)
+                
+                if B_mag < 1e-12:
+                    break
+                
+                puntos.append([x, y, z])
+                
+                # Paso en dirección del campo
+                B_norm = B / B_mag
+                x += direccion * paso * B_norm[0]
+                y += direccion * paso * B_norm[1]
+                z += direccion * paso * B_norm[2]
+                
+                # Límites para evitar que se vayan muy lejos
+                if abs(x) > 5 or abs(y) > 5 or abs(z) > 4:
+                    break
+            
+            return np.array(puntos)
+        
+        # Generar líneas de campo del alambre (circulares)
+        lineas_alambre = []
+        for r in [0.6, 1.2, 1.8, 2.4]:
+            for z_level in [-1.0, -0.5, 0.5, 1.0]:
+                for angulo in np.linspace(0, 2*np.pi, 6, endpoint=False):
+                    x0 = r * np.cos(angulo)
+                    y0 = r * np.sin(angulo)
+                    z0 = z_level
+                    
+                    if abs(z_level) > 0.2 or r != 3.0:  # Evitar espira
+                        linea = trazar_linea_campo(x0, y0, z0, direccion=1, paso=0.06)
+                        if len(linea) > 2:
+                            lineas_alambre.append(linea)
+        
+        # Generar líneas de campo de la espira (dipolares)
+        lineas_espira = []
+        
+        # Líneas desde el centro hacia afuera
+        for angulo_xy in np.linspace(0, 2*np.pi, 8, endpoint=False):
+            for r_inicio in [3.5, 4.0]:
+                for z_inicio in [0.2, 0.5, 1.0]:
+                    x0 = r_inicio * np.cos(angulo_xy)
+                    y0 = r_inicio * np.sin(angulo_xy)
+                    
+                    # Líneas superiores
+                    linea_sup = trazar_linea_campo(x0, y0, z_inicio, direccion=1, paso=0.08)
+                    if len(linea_sup) > 2:
+                        lineas_espira.append(linea_sup)
+                    
+                    # Líneas inferiores
+                    linea_inf = trazar_linea_campo(x0, y0, -z_inicio, direccion=1, paso=0.08)
+                    if len(linea_inf) > 2:
+                        lineas_espira.append(linea_inf)
+        
+        # Líneas en el eje Z
+        for z_start in [-3.0, -2.5, 2.5, 3.0]:
+            linea_eje = trazar_linea_campo(0.05, 0, z_start, direccion=1 if z_start > 0 else -1, paso=0.1)
+            if len(linea_eje) > 2:
+                lineas_espira.append(linea_eje)
+        
+        self.punto = punto_original
+        
+        # Dibujar líneas de campo del alambre (rojas)
+        for linea in lineas_alambre:
+            if len(linea) > 1:
+                ax2.plot(linea[:, 0], linea[:, 1], linea[:, 2], 
+                        color='red', alpha=0.7, linewidth=1.8)
+        
+        # Dibujar líneas de campo de la espira (azules)
+        for linea in lineas_espira:
+            if len(linea) > 1:
+                ax2.plot(linea[:, 0], linea[:, 1], linea[:, 2], 
+                        color='blue', alpha=0.7, linewidth=1.8)
+        
+        # Dibujar alambre y espira
+        z_alambre = np.linspace(-1, 1, 100)
+        ax2.plot(np.zeros_like(z_alambre), np.zeros_like(z_alambre), z_alambre, 
+                'r-', linewidth=6, label=f'Alambre I={self.corriente_alambre}A')
+        
+        phi_espira = np.linspace(0, 2*np.pi, 100)
+        x_espira_3d = 3 * np.cos(phi_espira)
+        y_espira_3d = 3 * np.sin(phi_espira)
+        z_espira_3d = np.zeros_like(phi_espira)
+        ax2.plot(x_espira_3d, y_espira_3d, z_espira_3d, 
+                'b-', linewidth=6, label=f'Espira I={self.corriente_espira}A')
+        
+        # Punto de cálculo
+        ax2.scatter(self.punto[0], self.punto[1], self.punto[2], 
+                   color='green', s=200, marker='*', label='Punto P', 
+                   edgecolor='black', linewidth=1, zorder=10)
+        ax2.set_xlabel('X (m)')
+        ax2.set_ylabel('Y (m)')
+        ax2.set_zlabel('Z (m)')
+        ax2.set_title('Líneas de Campo Magnético 3D\nAlambre (Rojo) + Espira (Azul)')
+        ax2.legend(loc='upper left')
+        ax2.set_xlim(-4, 4)
+        ax2.set_ylim(-4, 4)
+        ax2.set_zlim(-3, 3)
+        
+        plt.tight_layout()
+        plt.show()
+        
+        print("✅ Visualización completada!")
+        print("📊 Se muestran:")
+        print("   • Líneas de campo 2D en plano z=0")
+        print("   • Líneas de campo 3D calculadas numéricamente")
 
 
 
@@ -1505,11 +2135,10 @@ def menu_principal():
         print("8. Graficar líneas de campo 2D - Espira")
         print("9. Graficar líneas de campo 3D - Espira")
         print("10. Configuración combinada (Alambre + Espira)")
-        print("11. Calcular campo magnético - BOBINAS DE HELMHOLTZ")
-        print("12. Salir")
+        print("11. Salir")
         print("-"*60)
         
-        opcion = input("Seleccione una opción (1-12): ")
+        opcion = input("Seleccione una opción (1-11): ")
         
         if opcion == '1':
             biot.cargar_datos_alambre()
@@ -1577,23 +2206,11 @@ def menu_principal():
             biot.graficar_lineas_campo_combinado()
         
         elif opcion == '11':
-            # Bobinas de Helmholtz
-            biot.cargar_datos_helmholtz()
-            B1, B2, B_total = biot.campo_bobinas_helmholtz()
-            biot.mostrar_resultados_helmholtz(B1, B2, B_total)
-            
-            print("\n🌟 Generando visualización de configuración...")
-            biot.graficar_configuracion_helmholtz()
-            
-            print("\n🌟 Generando visualización de líneas de campo...")
-            biot.graficar_lineas_campo_helmholtz()
-            
-        elif opcion == '12':
             print("¡Hasta luego!")
             break
             
         else:
-            print("Opción no válida. Por favor, elija una opción entre 1 y 12.")
+            print("Opción no válida. Por favor, elija una opción entre 1 y 11.")
 
 if __name__ == "__main__":
     menu_principal()
