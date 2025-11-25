@@ -2114,7 +2114,40 @@ centro y disminuye con la distancia.
         print("   • Líneas de campo 2D en plano z=0")
         print("   • Líneas de campo 3D calculadas numéricamente")
 
+    def calcular_campo_espiras_vueltas(self, radio, corriente, vueltas, x, y ,z, z0, N):
+        """Calcula el campo magnético de una bobina (muchas vueltas)."""
 
+        # Guardar estado previo
+        corriente_original = self.corriente
+        punto_original = getattr(self, "punto", None)
+
+        # Setear estado para la espira
+        self.corriente = corriente
+        self.punto = np.array([x, y, z])
+
+        # Acumulador
+        B_total = np.zeros(3)
+
+        # Repetimos la espira 'vueltas' veces
+        for _ in range(vueltas):
+
+            # --- TRUCO ---
+            # desplazamos artificialmente la espira en z
+            # sin tocar la función original
+            # sumando z0 al punto que “ve” la espira
+            self.punto = np.array([x, y, z - z0])
+
+            B_total += self.campo_espira_circular(
+                radio=radio,
+                N=N
+            )
+
+        # Restaurar estado
+        self.corriente = corriente_original
+        if punto_original is not None:
+            self.punto = punto_original
+
+        return B_total
 
 def menu_principal():
     """Menú principal del programa"""
@@ -2135,7 +2168,9 @@ def menu_principal():
         print("8. Graficar líneas de campo 2D - Espira")
         print("9. Graficar líneas de campo 3D - Espira")
         print("10. Configuración combinada (Alambre + Espira)")
-        print("11. Salir")
+        print("11. Calcular campo magnético - BOBINAS DE HELMHOLTZ")
+        print("12. Graficar configuración de Bobinas de Helmholtz")
+        print("13. Salir")
         print("-"*60)
         
         opcion = input("Seleccione una opción (1-11): ")
@@ -2206,6 +2241,133 @@ def menu_principal():
             biot.graficar_lineas_campo_combinado()
         
         elif opcion == '11':
+            # Cálculo del campo magnético de bobinas de Helmholtz
+            a = float(input("Radio de cada bobina (m): "))
+            I = float(input("Corriente en cada bobina (A): "))
+            Nvueltas = int(input("Número de vueltas por bobina: "))
+            d = float(input("Separación entre bobinas (m) [Helmholtz ideal = radio]: "))
+            
+            punto = str(input("Punto (x y z): "))
+            x, y, z = map(float, punto.split())
+            Nseg = int(input("Discretización por vuelta: "))
+
+            # Calcular campo total
+            B_total = np.array([0.0, 0.0, 0.0])
+            
+            # Bobina 1 en z = -d/2
+            B_total += biot.calcular_campo_espiras_vueltas(a, I, Nvueltas, x, y, z, -d/2, Nseg)
+            
+            # Bobina 2 en z = +d/2
+            B_total += biot.calcular_campo_espiras_vueltas(a, I, Nvueltas, x, y, z, +d/2, Nseg)
+
+            print("\nCampo total en el punto:")
+            print(f"Bx = {B_total[0]:.6e} T")
+            print(f"By = {B_total[1]:.6e} T")
+            print(f"Bz = {B_total[2]:.6e} T")
+            print(f"|B| = {np.linalg.norm(B_total):.6e} T\n")
+
+            print("\n¿Qué significan estos resultados?")
+            print("- El campo se calcula sumando la contribución magnética de cada espira de ambas bobinas usando la ley de Biot–Savart.")
+            print("- Las bobinas de Helmholtz están separadas una distancia igual a su radio para generar una región central con campo casi uniforme.")
+            print("- Bx, By y Bz son las componentes del campo magnético total producido por las dos bobinas en el punto elegido.")
+
+        elif opcion == '12':
+            R = float(input("Radio de las bobinas (m): "))
+            d = float(input("Separación entre las bobinas (m). Se recomienda igual al radio: "))
+            N = int(input("Número de espiras por bobina: "))
+            I = float(input("Corriente en las bobinas (A): "))
+            z1 = -d / 2  # Posición Z de la primera bobina
+            z2 = d / 2   # Posición Z de la segunda bobina
+            # --- 2. Generación de las Bobinas ---
+            t = np.linspace(0, 2 * np.pi, 100) # Rango angular de 0 a 2*pi
+
+            x_coil1 = R * np.cos(t)
+            y_coil1 = R * np.sin(t)
+            z_coil1 = np.full_like(t, z1)
+
+            x_coil2 = R * np.cos(t)
+            y_coil2 = R * np.sin(t)
+            z_coil2 = np.full_like(t, z2)
+
+            # --- 3. Cálculo del Campo Magnético en el Eje Z ---
+            # Función para calcular el campo magnético en el eje Z
+            def B_field_on_axis(z_axis_points, R, d, MU_0, N, I):
+                # Campo de la primera bobina
+                B1 = (MU_0 * N * I * R**2) / (2 * (R**2 + (z_axis_points - d/2)**2)**(3/2))
+                # Campo de la segunda bobina
+                B2 = (MU_0 * N * I * R**2) / (2 * (R**2 + (z_axis_points + d/2)**2)**(3/2))
+                # Campo total (suma de los componentes Z, ya que los componentes radiales se cancelan en el eje)
+                return B1 + B2
+
+            # Puntos a lo largo del eje Z para calcular el campo
+            z_plot_range = np.linspace(-R * 2, R * 2, 200)
+            B_z_values = B_field_on_axis(z_plot_range, R, d, MU_0, N, I)
+
+            # --- 3. Cálculo e Impresión por Consola de la Magnitud del Campo ---
+
+            print("\n## Magnitud del Campo Magnético en Puntos Clave ##")
+            print(f"Parámetros: R = {R:.1f} m, Separación d = {d:.1f} m, N = {N}, I = {I:.1f} A")
+            print("-" * 50)
+
+            # 3.1 Campo en el centro (Z = 0)
+            z_center = 0.0
+            B_center = B_field_on_axis(z_center, R, d, MU_0, N, I)
+            print(f"Campo en el centro (Z = {z_center:.1f} m): \t\t{B_center * 1e6:.3f} µT (Microteslas)")
+
+            # 3.2 Campo en la posición de la Bobina 1 (Z = -R/2)
+            B_coil1 = B_field_on_axis(z1, R, d, MU_0, N, I)
+            print(f"Campo en la Bobina 1 (Z = {z1:.1f} m): \t\t{B_coil1 * 1e6:.3f} µT")
+
+            # 3.3 Campo en la posición de la Bobina 2 (Z = +R/2)
+            B_coil2 = B_field_on_axis(z2, R, d, MU_0, N, I)
+            print(f"Campo en la Bobina 2 (Z = {z2:.1f} m): \t\t{B_coil2 * 1e6:.3f} µT")
+
+            # 3.4 Campo en un extremo (Ej. Z = 2R)
+            z_end = 2 * R
+            B_end = B_field_on_axis(z_end, R, d, MU_0, N, I)
+            print(f"Campo en el Extremo (Z = {z_end:.1f} m): \t\t{B_end * 1e6:.3f} µT")
+
+            print("-" * 50)
+
+            # --- 4. Generación de los Gráficos ---
+            fig = plt.figure(figsize=(15, 6)) # Aumentar el tamaño para tres subgráficos
+
+            # Subgráfico 1: Vista 3D de las Bobinas
+            ax1 = fig.add_subplot(121, projection='3d')
+            ax1.plot(x_coil1, y_coil1, z_coil1, color='blue', linewidth=2, label=f'Bobina 1 (Z={z1:.1f} m)')
+            ax1.plot(x_coil2, y_coil2, z_coil2, color='red', linewidth=2, label=f'Bobina 2 (Z={z2:.1f} m)')
+
+            # Añadir el eje de las bobinas
+            ax1.plot([0, 0], [0, 0], [-R*2, R*2], color='gray', linestyle='--', linewidth=1, label='Eje Z')
+
+            ax1.set_title(f'Bobinas de Helmholtz (3D) con R = {R:.1f}m y d = {d:.1f}m')
+            ax1.set_xlabel('X (m)')
+            ax1.set_ylabel('Y (m)')
+            ax1.set_zlabel('Z (m)')
+            ax1.set_xlim([-R * 1.5, R * 1.5]) # Ajustar límites para mejor visualización
+            ax1.set_ylim([-R * 1.5, R * 1.5])
+            ax1.set_zlim([-R * 1.5, R * 1.5])
+            ax1.view_init(elev=20, azim=45)
+            ax1.legend() # Mostrar la leyenda
+
+            # Subgráfico 2: Campo Magnético en el Eje Z
+            ax2 = fig.add_subplot(122)
+            ax2.plot(z_plot_range, B_z_values, color='green', linewidth=2)
+            ax2.set_title('Campo Magnético (Componente Z) en el Eje Central')
+            ax2.set_xlabel('Posición Z (m)')
+            ax2.set_ylabel('Magnitud del Campo B (Tesla)')
+            ax2.grid(True)
+            ax2.axvline(x=z1, color='blue', linestyle=':', label='Posición Bobina 1')
+            ax2.axvline(x=z2, color='red', linestyle=':', label='Posición Bobina 2')
+            ax2.legend()
+            ax2.set_xlim([-R * 1.5, R * 1.5]) # Límites para mostrar la región central
+            ax2.set_ylim([0, np.max(B_z_values) * 1.1]) # Ajustar límites Y
+
+            # Mostrar la figura
+            plt.tight_layout()
+            plt.show()
+        
+        elif opcion == '13':
             print("¡Hasta luego!")
             break
             
