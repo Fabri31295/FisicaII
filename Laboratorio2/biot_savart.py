@@ -2168,9 +2168,8 @@ def menu_principal():
         print("8. Graficar líneas de campo 2D - Espira")
         print("9. Graficar líneas de campo 3D - Espira")
         print("10. Configuración combinada (Alambre + Espira)")
-        print("11. Calcular campo magnético - BOBINAS DE HELMHOLTZ")
-        print("12. Graficar configuración de Bobinas de Helmholtz")
-        print("13. Salir")
+        print("11. Graficar configuración de Bobinas de Helmholtz")
+        print("12. Salir")
         print("-"*60)
         
         opcion = input("Seleccione una opción (1-11): ")
@@ -2241,37 +2240,6 @@ def menu_principal():
             biot.graficar_lineas_campo_combinado()
         
         elif opcion == '11':
-            # Cálculo del campo magnético de bobinas de Helmholtz
-            a = float(input("Radio de cada bobina (m): "))
-            I = float(input("Corriente en cada bobina (A): "))
-            Nvueltas = int(input("Número de vueltas por bobina: "))
-            d = float(input("Separación entre bobinas (m) [Helmholtz ideal = radio]: "))
-            
-            punto = str(input("Punto (x y z): "))
-            x, y, z = map(float, punto.split())
-            Nseg = int(input("Discretización por vuelta: "))
-
-            # Calcular campo total
-            B_total = np.array([0.0, 0.0, 0.0])
-            
-            # Bobina 1 en z = -d/2
-            B_total += biot.calcular_campo_espiras_vueltas(a, I, Nvueltas, x, y, z, -d/2, Nseg)
-            
-            # Bobina 2 en z = +d/2
-            B_total += biot.calcular_campo_espiras_vueltas(a, I, Nvueltas, x, y, z, +d/2, Nseg)
-
-            print("\nCampo total en el punto:")
-            print(f"Bx = {B_total[0]:.6e} T")
-            print(f"By = {B_total[1]:.6e} T")
-            print(f"Bz = {B_total[2]:.6e} T")
-            print(f"|B| = {np.linalg.norm(B_total):.6e} T\n")
-
-            print("\n¿Qué significan estos resultados?")
-            print("- El campo se calcula sumando la contribución magnética de cada espira de ambas bobinas usando la ley de Biot–Savart.")
-            print("- Las bobinas de Helmholtz están separadas una distancia igual a su radio para generar una región central con campo casi uniforme.")
-            print("- Bx, By y Bz son las componentes del campo magnético total producido por las dos bobinas en el punto elegido.")
-
-        elif opcion == '12':
             R = float(input("Radio de las bobinas (m): "))
             d = float(input("Separación entre las bobinas (m). Se recomienda igual al radio: "))
             N = int(input("Número de espiras por bobina: "))
@@ -2367,7 +2335,7 @@ def menu_principal():
             plt.tight_layout()
             plt.show()
         
-        elif opcion == '13':
+        elif opcion == '12':
             print("¡Hasta luego!")
             break
             
